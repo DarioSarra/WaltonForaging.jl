@@ -2,8 +2,8 @@ module WaltonForaging
 
 using Reexport
 #add CSV@0.8.5
-@reexport using DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, Bootstrap, MixedModels, Optim, Distributions
-#CSV,
+@reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels
+# @reexport using Bootstrap, Optim, Distributions
 import Statistics: median, std
 
 include("Analysis_fun.jl")
