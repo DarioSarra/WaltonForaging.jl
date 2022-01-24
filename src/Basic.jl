@@ -1,4 +1,4 @@
-using Revise, LForaging
+using Revise, WaltonForaging
 ##
 
 ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (main_path = "/Users/dariosarra/Documents/Lab/Walton/LForaging")
