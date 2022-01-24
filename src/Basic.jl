@@ -5,7 +5,7 @@ ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (
 fig_dir = joinpath(main_path,"Figures")
 # pokes = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/Poke_data.csv")))#, DataFrame)
 # pokes2 = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/New_Poke_data.csv")))#, DataFrame)
-pokes = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv")))#, DataFrame)
+pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataFrame)
 pokes = preprocess_pokes(pokes)[:,[:MOUSE,:DATE,:SIDE,:KIND,:TRAVEL,:BOUT,:TRIAL,:BOUT_TRIAL,:POKE_TRIAL,:REWARD,:LEAVE,
     :IN, :OUT, :IN_TRIAL, :OUT_TRIAL, :IN_BOUT, :OUT_BOUT, :DURATION,:TIME]];
 ##

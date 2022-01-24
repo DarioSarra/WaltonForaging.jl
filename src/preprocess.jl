@@ -64,7 +64,7 @@ function preprocess_bouts(df)
     transform!(groupby(bouts,[:MOUSE,:DATE,:BOUT]),
         :DURATION => (t -> round.(cumsum(t), digits = 5)) => :WAITING_TIME
     )
-    filter!(r -> (r.LEAVE .| r.REWARD), bouts)
+    filter!(r -> (Bool(r.LEAVE) .| Bool(r.REWARD)), bouts)
     bouts = bouts[:,[:DATE,:MOUSE,:SIDE,:KIND,:TRAVEL,:TRIAL, :BOUT,:REWARD,:LEAVE,:DURATION,:TIME,:WAITING_TIME,:IN,:OUT,:IN_TRIAL,:OUT_TRIAL]]
     return bouts
 end
