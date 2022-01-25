@@ -48,10 +48,29 @@ end
 function get_rew_rate(rewards,n, alpha, initialvalue)
     x = collect(zip(rewards,n))
     return accumulate(x; init=initialvalue) do value, x
+        #= x is a tuple containing
+        the outcome val (1 = rew, 0 = omission): x[1]
+        and the number of bins in that poke: x[2]
+        =#
         Bool(x[1]) ? get_consecutive_rewards_rate(x[2], alpha, value) : get_consecutive_omissions_rate(x[2], alpha, value)
     end
 end
 
+function get_rew_rate(rewards,n, alpha, initialvalue, firsttrial)
+    x = collect(zip(rewards,n))
+    #= x is a tuple containing
+    the outcome val (1 = rew, 0 = omission): x[1]
+    and the number of bins in that poke: x[2]
+    =#
+    return accumulate(x; init=initialvalue) do value, x
+        if Bool(firsttrial)
+            # firsttrial tells if a new session starts here so it needs a new initial value
+            return initialvalue
+        else
+            return Bool(x[1]) ? get_consecutive_rewards_rate(x[2], alpha, value) : get_consecutive_omissions_rate(x[2], alpha, value)
+        end
+    end
+end
 
 # rew = [0,0,1,1,0,0,0,1,1,1]
 # alpha_val = 0.1

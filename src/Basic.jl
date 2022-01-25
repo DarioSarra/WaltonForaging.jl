@@ -6,17 +6,23 @@ fig_dir = joinpath(main_path,"Figures")
 # pokes = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/Poke_data.csv")))#, DataFrame)
 # pokes2 = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/New_Poke_data.csv")))#, DataFrame)
 pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataFrame)
-pokes = preprocess_pokes(pokes)[:,[:MOUSE,:DATE,:SIDE,:KIND,:TRAVEL,:BOUT,:TRIAL,:BOUT_TRIAL,:POKE_TRIAL,:REWARD,:LEAVE,
-    :IN, :OUT, :IN_TRIAL, :OUT_TRIAL, :IN_BOUT, :OUT_BOUT, :DURATION,:TIME]];
+preprocess_pokes!(pokes)
+open_html_table(pokes[1:2000,:])
 ##
 pokes[!,:BIN] = Int64.(round.(pokes.DURATION ./ 0.1))
 filter!(r-> r.BIN >= 1, pokes)
 pokes[!,:PatchRewRate] = get_rew_rate(pokes.REWARD,pokes.BIN, 0.1, 2)
-transform!(groupby(pokes,[:MOUSE,:DATE]), [:REWARD,:BIN] => ((R,B) -> get_rew_rate(R,B, 0.1, 2)) => :PatchRewRate)
-open_html_table(pokes[1:2000,:])
+transform!(groupby(pokes,[:MOUSE,:DATE]), [:REWARD,:BIN] => (R,B) -> get_rew_rate(R,B, 0.1, 2) => :PatchRewRate)
 
-
-
+##
+mice = union(pokes.MOUSE)
+days = union(pokes.DATE)
+test = filter(r -> r.MOUSE == mice[1] && r.DATE == days[1], pokes)
+check = fit(RhoComparison,test)
+open_html_table(test[1:500,:])
+mice[1]
+days[1]
+sum(test.BIN)
 ##
 @df pokes density(:DURATION, group = :KIND, xrotation = 45)
 savefig(joinpath(fig_dir,"Poke_Duration_density.png"))
