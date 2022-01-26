@@ -1,13 +1,11 @@
 abstract type AbstractModel end
 
-struct RhoComparison <: AbstractModel
+mutable struct RhoComparison <: AbstractModel
     params::Vector{Float64}
-    env_rho::Float64
 end
 
 function init(::Type{WaltonForaging.RhoComparison}, df)
     env_alpha = rand(0.0:0.0001:0.1)
-    final_env_rho = sum(df.REWARD/df[end,:TIME])
     reset_val = rand(0.0:0.0001:0.5)
     patch_alpha = rand(0.0:0.0001:0.2)
     return RhoComparison([
@@ -16,7 +14,7 @@ function init(::Type{WaltonForaging.RhoComparison}, df)
         rand(2:0.0001:10), #=beta = [2, 10] noise parameter or inverse temperature=#
         reset_val, #=reset = [0, 0.5] patch env rew rate at the entrance of a trials, because it has decayed in the last trial=#
         0.1 #=bias = [2, 10] bias towards staying in the softmax=#
-        ], final_env_rho)
+        ])
 end
 
 Distributions.params(m::RhoComparison) = m.params

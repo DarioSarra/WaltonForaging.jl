@@ -1,6 +1,5 @@
 using Revise, WaltonForaging
 ##
-
 ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (main_path = "/Users/dariosarra/Documents/Lab/Walton/LForaging")
 fig_dir = joinpath(main_path,"Figures")
 # pokes = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/Poke_data.csv")))#, DataFrame)
@@ -9,13 +8,50 @@ pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataF
 preprocess_pokes!(pokes)
 open_html_table(pokes[1:2000,:])
 ##
-pokes[!,:BIN] = Int64.(round.(pokes.DURATION ./ 0.1))
-filter!(r-> r.BIN >= 1, pokes)
-pokes[!,:PatchRewRate] = get_rew_rate(pokes.REWARD,pokes.BIN, 0.1, 2)
-transform!(groupby(pokes,[:MOUSE,:DATE]), [:REWARD,:BIN] => (R,B) -> get_rew_rate(R,B, 0.1, 2) => :PatchRewRate)
+mice = union(pokes.MOUSE)
+test_multiple_sessions = filter(r -> r.MOUSE == mice[1],pokes)
+@time fit(RhoComparison,test_multiple_sessions)
+function fit_handler(test_multiple_sessions)
+    res = []
+    for i in 1:10
+        push!(res,fit(RhoComparison,test_multiple_sessions))
+    end
+    return res
+end
+
+Francois_res = (env_alpha = 0.003, patch_aplha = 0.266, beta = 6.26, reset = 0.339, bias = 4.147)
+open_html_table(test_multiple_sessions[1:5000,:])
+open_html_table(test_multiple_sessions[1:10,:])
+-sum(log.(test_multiple_sessions.Probability))
 
 ##
 mice = union(pokes.MOUSE)
+days = union(pokes.DATE)
+pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataFrame)
+open_html_table(pokes[1:100,:])
+sum(df.BIN)
+sum(df.REWARD)
+##
+env_alpha, patch_alpha, beta, reset_val, bias = (0.003, 0.25, 6, 0.3, 4)
+transform!(df,[:REWARD,:BIN,:ENV_INITIALVALUE,:NEWSESSION] => ((r,b,i,n) -> env_get_rew_rate(r,b,i,n,env_alpha)) => :EnvRewRate)
+transform!(df, [:REWARD,:BIN,:NEWTRIAL] => ((r,b,n) -> patch_get_rew_rate(r, b, reset_val, n, patch_alpha)) => :PatchRewRate)
+# m = init(RhoComparison, df)
+m = RhoComparison([0.003, 0.25, 6, 0.3, 4])
+transform!(df, [:EnvRewRate,:PatchRewRate,:LEAVE] => ByRow((e,p,l) -> Poutcome(m,e,p,l)) => :Probability)
+-sum(log.(filter(r -> r.SIDE == "travel", df).Probability))
+open_html_table(df[1:1498,:])
+exp(bias + beta*patch_rew_rate)/(exp(bias + beta*patch_rew_rate) + exp(beta*env_rew_rate))
+beta = 6
+bias = 4
+log()
+patch_rew_rate = df.PatchRewRate[1]
+env_rew_rate = df.EnvRewRate[1]
+exp(bias + beta*patch_rew_rate)/(exp(bias + beta*patch_rew_rate) + exp(beta*env_rew_rate))
+##
+x = 0.16874999999999998
+x + 0.25*(1 - x)
+
+##
 days = union(pokes.DATE)
 test = filter(r -> r.MOUSE == mice[1] && r.DATE == days[1], pokes)
 check = fit(RhoComparison,test)
@@ -23,6 +59,8 @@ open_html_table(test[1:500,:])
 mice[1]
 days[1]
 sum(test.BIN)
+
+
 ##
 @df pokes density(:DURATION, group = :KIND, xrotation = 45)
 savefig(joinpath(fig_dir,"Poke_Duration_density.png"))

@@ -1,6 +1,7 @@
 function trial_info!(df)
     transform!(groupby(df,[:MOUSE,:DATE, :TRIAL,:SIDE]),
         :IN => (x -> collect(1:length(x))) => :POKE_TRIAL,
+        :IN => (x-> Int64.(vcat(zeros(length(x)-1), [1]))) => :LEAVE,
         :REWARD => (x -> pushfirst!(Int64.(cumsum(x)[1:end-1].+1),1)) => :BOUT_TRIAL,
         :IN => (i -> round.(i .- i[1], digits = 5)) => :IN_TRIAL,
         [:IN, :OUT] => ((i,o) -> round.(o .- i[1], digits = 5)) => :OUT_TRIAL,
@@ -49,27 +50,30 @@ end
 
 function add_time_bins!(df; binsize = 0.1)
     transform!(df,:DURATION => (ByRow(d -> Int64(round(d/binsize)))) => :BIN)
-    # df[!,:BIN] = Int64.(round.(df.DURATION ./ binsize))
-    filter!(r-> r.BIN >= 1, df)
+    # transform!(df,:DURATION => (ByRow(d -> Int64(ceil(d/binsize)))) => :BIN)
+    filter!(r-> (r.BIN >= 1 || Bool(r.REWARD) || Bool(r.LEAVE)), df)
+    replace!(df.BIN, 0 => 1)
+    # filter!(r-> r.BIN >= 1, df)
+
 end
 
 function preprocess_pokes!(df; binsize = 0.1)
     trial_info!(df)
     bout_info!(df)
     travel_info!(df)
-    leave_info!(df)
     find_bouts!(df)
     cleaned_times!(df)
     transform!(df,:REWARD => ByRow(Int64) => :REWARD)
-    transform!(df,:LEAVE => ByRow(Int64) => :LEAVE)
     select!(df,[:MOUSE,:DATE,:SIDE,:KIND,:TRAVEL,:BOUT,:TRIAL,:BOUT_TRIAL,:POKE_TRIAL,:REWARD,:LEAVE,
         :IN, :OUT, :IN_TRIAL, :OUT_TRIAL, :IN_BOUT, :OUT_BOUT, :DURATION,:TIME]);
     add_time_bins!(df; binsize = binsize)
-    transform!(df,[:MOUSE,:DATE],
-        [:REWARD,:TIME] => ((r,t) -> sum(r)/t[end]) => :ENV_INITIALVALUE,
+    transform!(groupby(df,[:MOUSE,:DATE]),
+        [:REWARD,:BIN] => ((r,b) -> sum(r)/sum(b)) => :ENV_INITIALVALUE,
         :TRIAL => (t -> Int64.(vcat([1],zeros(length(t)-1)))) => :NEWSESSION
         )
-
+    transform!(groupby(df,[:MOUSE,:DATE,:TRIAL]),
+        :REWARD => (t -> Int64.(vcat([1],zeros(length(t)-1)))) => :NEWTRIAL
+        )
 end
 
 function preprocess_bouts(df)

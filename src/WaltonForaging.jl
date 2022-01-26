@@ -18,6 +18,6 @@ export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, funct
 export median, std
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!
 export preprocess_bouts
-export get_rew_rate
+export get_rew_rate, env_get_rew_rate, patch_get_rew_rate, Poutcome
 export AbstractModel, RhoComparison, params, fit, init
 end
