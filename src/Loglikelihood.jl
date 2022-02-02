@@ -18,13 +18,14 @@ function  nll_data(m::AbstractModel,df)
 end
 
 function Distributions.fit(::Type{T},df::DataFrames.AbstractDataFrame) where T<:WaltonForaging.AbstractModel
-    m = init(T, df)
+    m = init(T)#init(T, df)
     res = optimize(params(m)) do param
-        all(param .> 1e-10) || return 1e10
+        all(param .> 1e-5) || return 1e10
         ((param[1] < 1) && (param[2] < 1) && (param[4] < 1)) || return 1e10
-        params(m) .= param
+        updateparams!(m,param)
+        # params(m) .= param
         return nll_data(m, df)
     end
     params(m) .= Optim.minimizer(res)
-    return m
+    return m, res
 end

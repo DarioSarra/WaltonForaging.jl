@@ -6,10 +6,11 @@ using Reexport
 @reexport using Optim, Distributions
 import Statistics: median, std
 
+abstract type AbstractModel end
 include("Analysis_fun.jl")
 include("preprocess.jl")
 include("RewRateUpdates.jl")
-include("Models.jl")
+include("RhoComparison.jl")
 include("Loglikelihood.jl")
 
 
