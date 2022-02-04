@@ -51,7 +51,6 @@ function Likelihood(m::RhoComparison,df)
 
     env_alpha, patch_alpha, beta, reset_val, bias = tuple(params(m)...)
     final_env_rho = sum(df.REWARD/df[end,:TIME])
-    # transform!(df, [:REWARD,:BIN] => ((R,B) -> get_rew_rate(R,B, env_alpha, final_env_rho)) => :EnvRewRate)
     transform!(df,[:REWARD,:BIN,:ENV_INITIALVALUE,:NEWSESSION] => ((r,b,i,n) -> env_get_rew_rate(r,b,i,n,env_alpha)) => :EnvRewRate)
     transform!(df, [:REWARD,:BIN,:NEWTRIAL] => ((r,b,n) -> patch_get_rew_rate(r, b, reset_val, n, patch_alpha)) => :PatchRewRate)
     transform!(df, [:EnvRewRate,:PatchRewRate,:LEAVE] => ByRow((e,p,l) -> Poutcome(m,e,p,l)) => :Probability)

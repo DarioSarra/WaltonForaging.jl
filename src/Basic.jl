@@ -19,7 +19,9 @@ function fit_handler(test_multiple_sessions)
     return res
 end
 ##
-# @time fit(RhoComparison,test_multiple_sessions)
+# m, conv = @time fit(RhoComparison,test_multiple_sessions)
+# m, conv = @time fit(m,test_multiple_sessions)
+# check = @time fit_handler(test_multiple_sessions)
 # updateparams!
 ##
 ##
@@ -32,3 +34,6 @@ m = init(RhoComparison)
 WaltonForaging.updateparams!(m, [1.0,2.0,3.0,4.0,5.0])
 m
 all([(v < l) for (v,l) in zip(params(m), m.limits)])
+m
+conv
+open_html_table(test_multiple_sessions[1:200,:])

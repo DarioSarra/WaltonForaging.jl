@@ -12,14 +12,19 @@ savefig(joinpath(fig_dir,"Poke_Duration_density.png"))
 @df pokes histogram(:DURATION, xrotation = 45, bins = 100)
 savefig(joinpath(fig_dir,"Poke_Duration_histogram.png"))
 ##
-fdf = filter(r-> r.SIDE != "travel", pokes)
+fdf = filter(r-> r.SIDE != "travel" && r.TRAVEL != "last", pokes)
 fdf.MOUSE = categorical(fdf.MOUSE)
 fdf.KIND = levels!(categorical(fdf.KIND),["poor", "medium", "rich"])
 fdf.SIDE = categorical(fdf.SIDE)
 fdf.TRAVEL = levels!(categorical(fdf.TRAVEL),["short", "long"])
+countmap(fdf.TRAVEL)
 fdf.REWARD = categorical(Bool.(fdf.REWARD))
-f1 =  @formula(LEAVE ~ 1 + OUT_TRIAL+OUT_BOUT+DURATION+REWARD+TRAVEL+KIND + (1|MOUSE))
-gm = fit(MixedModel, f1,fdf, Bernoulli())
+f1 =  @formula(LEAVE ~ 1 + OUT_TRIAL+OUT_BOUT+REWARD+TRAVEL+KIND+(1+OUT_TRIAL+OUT_BOUT|MOUSE))
+gm = fit(MixedModel, f1,fdf, Bernoulli(), fast = true)
+f2 = @formula(LEAVE ~ 1 + OUT_TRIAL+OUT_BOUT+REWARD+KIND+TRAVEL+
+    OUT_TRIAL&REWARD+OUT_TRIAL&KIND+OUT_TRIAL&TRAVEL+
+    OUT_BOUT&REWARD+OUT_BOUT&KIND+OUT_BOUT&TRAVEL+(1+OUT_TRIAL+OUT_BOUT|MOUSE))
+gm2 = fit(MixedModel, f2,fdf, Bernoulli(), fast = true)
 
 ##
 pltdf = filter(r->r.DURATION <=2,fdf)

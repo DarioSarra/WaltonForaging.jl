@@ -20,6 +20,7 @@ function travel_info!(df)
     trav_df = combine(groupby(df,[:MOUSE,:DATE, :TRIAL]),
         :KIND => last => :TRAVEL
     )
+    trav_df.TRAVEL = [x in ["short", "long"] ? x : "last" for x in trav_df.TRAVEL]
     leftjoin!(df, trav_df, on = [:MOUSE,:DATE,:TRIAL])
 end
 
