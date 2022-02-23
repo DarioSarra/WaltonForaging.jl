@@ -3,7 +3,7 @@ module WaltonForaging
 using Reexport
 #add CSV@0.8.5
 @reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels
-@reexport using Optim, Distributions
+@reexport using Optim, Distributions, Random
 import Statistics: median, std
 
 abstract type AbstractModel end

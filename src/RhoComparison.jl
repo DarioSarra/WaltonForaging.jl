@@ -56,3 +56,7 @@ function Likelihood(m::RhoComparison,df)
     transform!(df, [:EnvRewRate,:PatchRewRate,:LEAVE] => ByRow((e,p,l) -> Poutcome(m,e,p,l)) => :Probability)
     return filter(r -> r.SIDE == "travel", df).Probability
 end
+
+function MixedModels.simulate(m::RhoComparison,df)
+    transform(df, :Probability => (x-> convert(Float64, x < rand())) => :SimulatedModel)
+end

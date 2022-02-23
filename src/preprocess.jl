@@ -47,6 +47,12 @@ function cleaned_times!(df)
     transform!(groupby(df,[:MOUSE,:DATE]),
         :DURATION => (t -> round.(cumsum(t), digits = 5)) => :TIME
     )
+    transform!(groupby(df,[:MOUSE,:DATE, :TRIAL]),
+        :DURATION => (t -> round.(cumsum(t), digits = 5)) => :TIME_TRIAL
+    )
+    transform!(groupby(df,[:MOUSE,:DATE, :TRIAL, :BOUT]),
+        :DURATION => (t -> round.(cumsum(t), digits = 5)) => :TIME_BOUT
+    )
 end
 
 function add_time_bins!(df; binsize = 0.1)
@@ -66,7 +72,7 @@ function preprocess_pokes!(df; binsize = 0.1)
     cleaned_times!(df)
     transform!(df,:REWARD => ByRow(Int64) => :REWARD)
     select!(df,[:MOUSE,:DATE,:SIDE,:KIND,:TRAVEL,:BOUT,:TRIAL,:BOUT_TRIAL,:POKE_TRIAL,:REWARD,:LEAVE,
-        :IN, :OUT, :IN_TRIAL, :OUT_TRIAL, :IN_BOUT, :OUT_BOUT, :DURATION,:TIME]);
+        :IN, :OUT, :IN_TRIAL, :OUT_TRIAL, :IN_BOUT, :OUT_BOUT, :DURATION,:TIME, :TIME_TRIAL, :TIME_BOUT]);
     add_time_bins!(df; binsize = binsize)
     transform!(groupby(df,[:MOUSE,:DATE]),
         [:REWARD,:BIN] => ((r,b) -> sum(r)/sum(b)) => :ENV_INITIALVALUE,

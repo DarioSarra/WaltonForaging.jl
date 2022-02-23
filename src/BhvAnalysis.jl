@@ -17,15 +17,21 @@ fdf.MOUSE = categorical(fdf.MOUSE)
 fdf.KIND = levels!(categorical(fdf.KIND),["poor", "medium", "rich"])
 fdf.SIDE = categorical(fdf.SIDE)
 fdf.TRAVEL = levels!(categorical(fdf.TRAVEL),["short", "long"])
-countmap(fdf.TRAVEL)
 fdf.REWARD = categorical(Bool.(fdf.REWARD))
+##
 f1 =  @formula(LEAVE ~ 1 + OUT_TRIAL+OUT_BOUT+REWARD+TRAVEL+KIND+(1+OUT_TRIAL+OUT_BOUT|MOUSE))
 gm = fit(MixedModel, f1,fdf, Bernoulli(), fast = true)
 f2 = @formula(LEAVE ~ 1 + OUT_TRIAL+OUT_BOUT+REWARD+KIND+TRAVEL+
     OUT_TRIAL&REWARD+OUT_TRIAL&KIND+OUT_TRIAL&TRAVEL+
     OUT_BOUT&REWARD+OUT_BOUT&KIND+OUT_BOUT&TRAVEL+(1+OUT_TRIAL+OUT_BOUT|MOUSE))
 gm2 = fit(MixedModel, f2,fdf, Bernoulli(), fast = true)
-
+f3 = @formula(LEAVE ~ 1 + TIME_TRIAL+TIME_BOUT+REWARD+KIND+TRAVEL+
+    TIME_TRIAL&REWARD+TIME_TRIAL&KIND+TIME_TRIAL&TRAVEL+
+    TIME_BOUT&REWARD+TIME_BOUT&KIND+TIME_BOUT&TRAVEL+(1+TIME_TRIAL+TIME_BOUT|MOUSE))
+gm3 = fit(MixedModel, f3,fdf, Bernoulli(), fast = true)
+##
+fdf.MMSimulation = simulate(MersenneTwister(42),gm2,fdf)
+open_html_table(fdf[1:500,:])
 ##
 pltdf = filter(r->r.DURATION <=2,fdf)
 poke_rich, poke_rich_df =
