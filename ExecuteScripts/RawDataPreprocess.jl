@@ -16,6 +16,7 @@ AFT = during reward collection average dist for that specific reward (the update
     during travel for how long in the previous forage before leaving
 There is a timeout for going back to travel if animal don't engage in foraging
 =#
-
-df = process_raw_session(session)
+pokes = process_raw_session(session; observe = true)
+process_raw_session("buh")
 open_html_table(df)
+ispath(session)
