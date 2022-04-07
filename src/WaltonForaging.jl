@@ -13,16 +13,24 @@ include("RewRateUpdates.jl")
 include("RhoComparison.jl")
 include("Loglikelihood.jl")
 include("ModelTests.jl")
-include("RawData.jl")
+include(joinpath("RawDataPreprocess","RawData.jl"))
+include(joinpath("RawDataPreprocess","Countpokes.jl"))
+include(joinpath("RawDataPreprocess","TableRawData.jl"))
+include(joinpath("Bouts","TableBouts.jl"))
+
+
+
 
 
 
 
 export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, function_analysis
 export median, std
+export convert_in_table, table_raw_data
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!
-export preprocess_bouts
+export preprocess_bouts, ismatch
 export get_rew_rate, env_get_rew_rate, patch_get_rew_rate, Poutcome
 export AbstractModel, RhoComparison, params, fit, init
 export EventDict, process_raw_session
+export process_bouts
 end
