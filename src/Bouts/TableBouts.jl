@@ -18,18 +18,34 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
         elseif dd[1,:State] == "Travel"
             forage_idx = findall(ismatch.(r"^Trav",dd.Port))
         end
-        df2 = DataFrame(
-            In = dd[forage_idx[1],:PokeIn],
-            Out = dd[forage_idx[end],:PokeOut],
-            ForageTime_total = dd[forage_idx[end],:PokeOut] - dd[forage_idx[1],:PokeIn],
-            ForageTime_Sum = sum(dd[forage_idx,:Duration]),
-            Pokes = length(forage_idx),
-            Rewarded = any(.!ismissing.(dd.RewardAvailable)),
-            # Giveup = any(ismatch.(r"^TravPoke",dd.Port))
-        )
-        for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
-                :Taskname, :Experimentname, :Startdate]
-            df2[!,x] .= dd[forage_idx,x][1]
+        if isempty(forage_idx)
+            println("Bout #$(dd[1,:Bout]), Patch #$(dd[1,:Patch]) has no pokes matching state $(dd[1,:State])")
+            df2 = DataFrame(
+                In = missing,
+                Out = missing,
+                ForageTime_total = missing,
+                ForageTime_Sum = missing,
+                Pokes = missing,
+                Rewarded = missing,
+                )
+                for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
+                        :Taskname, :Experimentname, :Startdate]
+                    df2[!,x] .= dd[1,x]
+                end
+        else
+            df2 = DataFrame(
+                In = dd[forage_idx[1],:PokeIn],
+                Out = dd[forage_idx[end],:PokeOut],
+                ForageTime_total = dd[forage_idx[end],:PokeOut] - dd[forage_idx[1],:PokeIn],
+                ForageTime_Sum = sum(dd[forage_idx,:Duration]),
+                Pokes = length(forage_idx),
+                Rewarded = any(.!ismissing.(dd.RewardAvailable)),
+                # Giveup = any(ismatch.(r"^TravPoke",dd.Port))
+            )
+            for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
+                    :Taskname, :Experimentname, :Startdate]
+                df2[!,x] .= dd[forage_idx,x][1]
+            end
         end
         return df2
     end

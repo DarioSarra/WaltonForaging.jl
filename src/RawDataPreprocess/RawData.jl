@@ -85,11 +85,15 @@ function process_raw_session(session_path::String; observe = false)
     transform!(groupby(pokes,:Patch), :T => determine_travel => :Travel)
     transform!(groupby(pokes,:Patch), :IFT => (x -> determine_richness(x,RichnessDict)) => :Richness)
 
+    #occasionally pokeout have missing values in that case it search for the poke_out value accoriding to the poke_out number
     checkPokeOut  = ismissing.(pokes.PokeOut) .&& ismatch.(r"^Poke",pokes.Port)
-    any(checkPokeOut) && println("checking pokes $(findall(checkPokeOut))")
     if any(checkPokeOut)
         for i in findall(checkPokeOut)
             pnum = pokes[i,:Poke]
+            if ismissing(pokes[i,:Poke])
+                println("poke deleted skipping poke out time correction")
+                continue
+            end
             pos = findfirst(prov.PokeOut_count .== pnum)
             pokes[i,:PokeOut] = prov[pos,:Time]
         end

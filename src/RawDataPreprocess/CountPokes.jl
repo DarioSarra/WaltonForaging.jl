@@ -11,11 +11,24 @@ function findpokesout!(df)
     idx = findall(df.PokeIn)
     df[!,:PokeOut] .= false
     df[!,:PokeOut_count] .= 0
-    for i in idx
+    for (count,i) in enumerate(idx)
         c = df[i,:PokeIn_count]
         pokeID = df[i,:Event]
-        po_idx = findfirst(e -> ispokeout(pokeID,e),df[i+1:end,:Event]) + i
-        isnothing(po_idx) && println("Poke out not found $c")
+        find_po = findfirst(e -> ispokeout(pokeID,e),df[i+1:end,:Event])
+        if !isnothing(find_po)
+            po_idx = find_po + i
+        else
+            println("Poke out not found for poke $c out of $(length(idx)) pokes at index $i out of $(nrow(df))")
+            if count == length(idx)
+                println("setting poke out index equal to last event")
+                po_idx = nrow(df)
+            else
+                println("no solution available, deleting poke $c with PokeID = $pokeID")
+                df[i,:PokeIn] = false
+                df[i,:PokeIn_count] = 0
+                continue
+            end
+        end
         df[po_idx,:PokeOut] = true
         df[po_idx,:PokeOut_count] = c
     end

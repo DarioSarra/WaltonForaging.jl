@@ -11,7 +11,8 @@ function table_raw_data(lines, eachlines)
     WaltonForaging.findpokesout!(prov)
     maximum(prov.PokeIn_count) == maximum(prov.PokeOut_count)
     prov[!,:Poke] = Vector{Union{Missing,Int}}(missing,nrow(prov))
-    for x in 1:maximum(prov.PokeIn_count)
+    clean_iterator = filter(x -> !ismissing(x) && x!=0 ,prov.PokeIn_count)
+    for x in clean_iterator#1:maximum(prov.PokeIn_count)
         prov[findfirst(prov.PokeIn_count .== x) : findfirst(prov.PokeOut_count .== x),
             :Poke] .= x
     end
