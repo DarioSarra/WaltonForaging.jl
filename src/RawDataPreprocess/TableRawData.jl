@@ -57,7 +57,9 @@ Opens a raw data file as a vector of string and identifies the first P-line
 containing T, AFT and IFT info to initiate `table_raw_data(session_path)`
 """
 function initialvalues(lines)
-    first_Pline = lines[findfirst(ismatch.(r"AFT:",lines))]
+    idx = findfirst(ismatch.(r"AFT:",lines))
+    isnothing(idx) && error("first P line not found")
+    first_Pline = lines[idx]
     P, T, AFT, IFT = parsePline(first_Pline)
     return P, T, AFT, IFT
 end
