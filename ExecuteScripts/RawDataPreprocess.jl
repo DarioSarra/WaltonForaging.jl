@@ -22,20 +22,6 @@ filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete f
 AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts2_20220609.csv"), DataFrame)
 AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes2_20220609.csv"), DataFrame)
 ##
-open_html_table(AllBouts[findall(ismissing.(AllBouts.Travel)),:])
-##
-g_df = combine(groupby(AllBouts,[:Treatment,:Group]),
-    :MouseID => (t -> [union(t)]) => :MouseID,
-    :Day => (t -> [union(t)]) => :Day)
-open_html_table(g_df)
-##
-open_html_table(AllBouts[1:10,:])
-bouts = AllBouts[:,[:MouseID,:Day,:Group,:Phase,:Treatment,
-    :Bout, :Patch, :State,:ActivePort,:Richness, :Travel,
-    :In, :Out, :ForageTime_total, :ForageTime_Sum,
-    :Pokes, :Rewarded, :GiveUp]]
-open_html_table(bouts[1:100,:])
-##
 path = joinpath(main_path,Exp,"Processed","full_PharmaData.csv")
 CSV.write(path, bouts)
 ##
@@ -43,44 +29,22 @@ fbouts = filter(r -> r.Phase != "None", bouts)
 path = joinpath(main_path,Exp,"Processed","filtered_PharmaData.csv")
 CSV.write(path, fbouts)
 open_html_table(fbouts[1:500,:])
-##
-session = joinpath(main_path,Exp,"RawData",FileList[1])
-#=
-Depending on when the p line is written, during forge port poke or during travel port poke,
-T  = poke time required to get reward (retrospective?), poke time required to travel
-    (initial value to threshold 2000)
-IFT = always tells you the initial average of the dist for which the richness is taken
-AFT = during reward collection average dist for that specific reward (the updated average),
-    during travel for how long in the previous forage before leaving
-There is a timeout for going back to travel if animal don't engage in foraging
-=#
-##
-session = filter(r -> ismatch(r"RP10-2021-02-25-152749.txt",r), FileList)[1]
-pokes = process_raw_session(joinpath(main_path,Exp,"RawData",session); observe = true)
-combine(groupby(pokes,:Patch), :RewardAvailable => x -> sum(.!ismissing.(x)))
-bouts = process_bouts(pokes; observe = true)
-
-##
-nrow(AllBouts)
-check_idx = findfirst(AllBouts.SubjectID .== "fp17" .&&
-    AllBouts.Startdate .== "2019/06/2015:06:16" .&&
-    AllBouts.Patch .== 53)
-
-open_html_table(AllBouts[check_idx-10:check_idx+10,:])
-findfirst(ismissing(AllBouts.In))
-##
-test = filter(r -> r.State == "Forage" && r.GiveUp && !ismissing(r.ForageTime_Sum), AllBouts)
-test.Richness = categorical(test.Richness)
-levels!(test.Richness,["poor","medium","rich"])
-test.Travel = categorical(test.Travel)
-levels!(test.Travel,["Short","Long"])
-df1 = combine(groupby(test,[:Travel,:Richness,:SubjectID]),:ForageTime_Sum .=> mean => :ForageTime)
-df2 = combine(groupby(df1,[:Travel,:Richness]),:ForageTime .=> [mean, sem])
-@df df2 scatter(:Richness,:ForageTime_mean,group = :Travel,yerror=:ForageTime_sem,
-    ylims=(1000,3000), legend = :outerright,
-    ylabel = "Average forage time \n from last reward at leaving", xlabel = "Patch richness",
-    legendtitle = "Travel type")
-savefig("/Users/dariosarra/Documents/Lab/Walton/WaltonForaging/DAphotometry/CoarseAnalysis_LastBout.pdf")
+## process_patches(AllBouts)
+unique(AllBouts.State)
+AllBouts.Reward
+df1 = combine(groupby(AllBouts,[:MouseID,:Day,:Patch])) do dd
+    df2 = DataFrame(
+        Forage_sum = sum(skipmissing(dd[dd.State .== "Forage", :ForageTime_Sum])),
+        Forage_tot = sum(skipmissing(dd[dd.State .== "Forage", :ForageTime_total])),
+        Travel_sum = sum(skipmissing(dd[dd.State .== "Travel", :ForageTime_Sum])),
+        Travel_tot = sum(skipmissing(dd[dd.State .== "Travel", :ForageTime_total])),
+        RewardLatency = mean(skipmissing(dd[dd.State .== "Forage", :ForageTime_Sum]))
+    )
+    for x in [:Richness,:Travel, :ActivePort, :Taskname, :Experimentname, :Startdate]
+        df2[!,x] .= dd[1,x]
+    end
+    return df2
+end
 ##
 test = filter(r -> r.State == "Forage", AllBouts)
 test.Richness = categorical(test.Richness)
