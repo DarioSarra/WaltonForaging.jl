@@ -61,28 +61,31 @@ function process_raw_session(session_path::String; observe = false)
     !ispath(session_path) && error("\"$(session_path)\" is not a viable path")
     lines = readlines(session_path)
     eachlines = eachline(session_path)
-    prov = table_raw_data(lines, eachlines)
+    prov = table_raw_data(lines, eachlines) #translate the text document to an equivalent table
     observe && open_html_table(prov)
     pokes = combine(groupby(prov, :Poke)) do dd
-        adjustevents(dd)
+        adjustevents(dd) ## groupby poke count to create a table with all info about each poke per row
     end
     sort!(pokes,:PokeIn)
     # pokes[!,:Duration] = pokes.PokeOut - pokes.PokeIn
     RichnessDict_keys = sort(collect(keys(countmap(pokes.IFT))))
     RichnessDict = Dict(x => y for (x,y) in zip(RichnessDict_keys,["rich", "medium", "poor", missing]))
-    pokes[!,:State] = find_task_state(pokes)
-    pokes[:,:Port] = [get(PortDict,x, x) for x in pokes.Port]
+    pokes[!,:State] = find_task_state(pokes) #understand if the poke is during foraging or travelling
+    pokes[:,:Port] = [get(PortDict,x, x) for x in pokes.Port] #tranlaste poke numbers to readable equivalent left, right and travel
     idx = findall(ismatch.(r"^reward_consumption_",pokes.Port))
+    #rewad consuption is used to count bouts/harvests
     for i in idx
         port = ismatch(r"left",pokes[i,:Port]) ? "RewLeft" : "RewRight"
         rewardedpoke = findprev(ismatch.(Regex(port),pokes.Port),i)
         pokes[rewardedpoke,:RewardConsumption] = pokes[i,:PokeIn]
     end
     transform!(pokes,[:Port,:TravelComplete] => ((p,t)->activeside(p,t)) => :ActivePort)
-    # pokes[!,:Incorrect] = @. !ismatch(Regex(pokes.ActivePort),pokes.Port) && ismatch(r"^Poke", pokes.Port)
     incorrectpokes!(pokes)
     transform!(pokes, :State => count_patches => :Patch)
-    transform!(groupby(pokes,:Patch), :T => determine_travel => :Travel)
+    # check the travel duration looking at T values for pokes in travel state. The last patch might not have such info
+    transform!(groupby(pokes,:Patch), [:T, :State] => ((t,s) -> determine_travel(t,s)) => :Travel)
+    # shift Travel info to the following patch since travel duration affects following not preceeding behaviour
+    pokes.Travel = vcat([missing],pokes[1:end-1, :Travel])
     transform!(groupby(pokes,:Patch), :IFT => (x -> determine_richness(x,RichnessDict)) => :Richness)
 
     #occasionally pokeout have missing values in that case it search for the poke_out value accoriding to the poke_out number
@@ -307,9 +310,11 @@ function count_patches(state_vec::AbstractVector)
     return res
 end
 
-function determine_travel(vec)
-    clean = filter(x -> !ismissing(x), vec)
-    isempty(clean) ? missing : minimum(clean) < 2500 ? "Short" : "Long"
+function determine_travel(t_vals, state_vals)
+    clean_state = filter(x -> !ismissing(x), state_vals)
+    f_t = t_vals[clean_state .== "Travel"]
+    clean_t = filter(x -> !ismissing(x), f_t)
+    isempty(clean_t) ? missing : minimum(clean_t) < 2500 ? "Short" : "Long"
 end
 
 function determine_richness(vec, Rdict)

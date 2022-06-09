@@ -3,8 +3,6 @@ ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (
 # Exp = "DAphotometry"
 Exp = "5HTPharma"
 fig_dir = joinpath(main_path,Exp, "Figures")
-# pokes = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/Poke_data.csv")))#, DataFrame)
-# pokes2 = DataFrame(CSV.read(joinpath(main_path,"Miscellaneous/New_Poke_data.csv")))#, DataFrame)
 pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataFrame)
 ##
 FileList = readdir(joinpath(main_path,Exp,"RawData"))
@@ -12,62 +10,39 @@ filter!(r -> ismatch(r".txt",r), FileList)
 filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
 filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
 ##
-AllBouts = DataFrame()
-for file in FileList[1:end]
-    println(file)
-    session = joinpath(main_path,Exp,"RawData",file)
-    pokes = process_raw_session(session; observe = false)
-    bouts = process_bouts(pokes; observe = false)
-    # path = joinpath(main_path,Exp,"Processed",replace(file,"txt"=>"csv"))
-    # CSV.write(path, bouts)
-    if isempty(AllBouts)
-        AllBouts = bouts
-        allowmissing!(AllBouts)
-    else
-        append!(AllBouts,bouts)
-    end
-end
-AllBouts[!,:Day] = [string(x[1:10]) for x in AllBouts.Startdate]
-AllBouts[!,:MouseID] = [ismatch.(r"RP\d$",x) ? "RP0"*x[end] : x for x in AllBouts.SubjectID]
-path = joinpath(main_path,Exp,"Processed","AllBouts_20220601.csv")
-CSV.write(path, AllBouts)
+# AllPokes, AllBouts = process_foraging(main_path,Exp)
+# pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
+#     "src","RawDataPreprocess","PharmaRaquel.jl")
+# include(pharmainfo)
+# bout_path = joinpath(main_path,Exp,"Processed","AllBouts2_20220609.csv")
+# CSV.write(bout_path, AllBouts)
+# pokes_path = joinpath(main_path,Exp,"Processed","AllPokes2_20220609.csv")
+# CSV.write(pokes_path, AllPokes)
 ##
-Cit_days = ["2021/03/01","2021/03/04"]
-MDL_days = ["2021/03/08","2021/03/11"]
-SB_days = ["2021/03/15","2021/03/18"]
-GBR_days = ["2021/03/22","2021/03/25"]
-Ato_days = ["2021/03/29","2021/04/01"]
-AllDays = vcat(Cit_days,MDL_days,SB_days,GBR_days,Ato_days)
-PhaseDict = Dict{String,String}()
-for (name,vals) in zip(["Cit","MDL","SB","GBR","Ato"], [Cit_days,MDL_days,SB_days,GBR_days,Ato_days])
-    for i in vals
-        PhaseDict[i] = name
-    end
-end
-PhaseDict
-AllBouts[!,:Phase] = [get(PhaseDict,x,"None") for x in AllBouts.Day]
+AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts2_20220609.csv"), DataFrame)
+AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes2_20220609.csv"), DataFrame)
 ##
-Group_A = ["RP01","RP03","RP05","RP07","RP09","RP11","RP13","RP15","RP17"]
-Group_B = ["RP02","RP04","RP06","RP08","RP10","RP12","RP14","RP16","RP18"]
-AllBouts[!,:Group] = [x in Group_A ? "A" : "B" for x in AllBouts.MouseID]
-GroupDict = Dict{String,String}()
-for (name,vals) in zip(["Cit","MDL","SB","GBR","Ato"], [Cit_days,MDL_days,SB_days,GBR_days,Ato_days])
-    for (g,v) in zip(["B","A"],vals)
-        GroupDict[v*"_"*g] = name
-    end
-    for (g,v) in zip(["A","B"],vals)
-        GroupDict[v*"_"*g] = "VEH"
-    end
-end
-GroupDict
-transform!(AllBouts, [:Day,:Group] => ByRow((d,g)-> get(GroupDict,d*"_"*g,"None")) => :Treatment)
+open_html_table(AllBouts[findall(ismissing.(AllBouts.Travel)),:])
 ##
-filter(r -> r.Treatment)
-g_df = combine(groupby(AllBouts,[:MouseID,:Group]), :Treatment => t -> [union(t)])
 g_df = combine(groupby(AllBouts,[:Treatment,:Group]),
     :MouseID => (t -> [union(t)]) => :MouseID,
     :Day => (t -> [union(t)]) => :Day)
 open_html_table(g_df)
+##
+open_html_table(AllBouts[1:10,:])
+bouts = AllBouts[:,[:MouseID,:Day,:Group,:Phase,:Treatment,
+    :Bout, :Patch, :State,:ActivePort,:Richness, :Travel,
+    :In, :Out, :ForageTime_total, :ForageTime_Sum,
+    :Pokes, :Rewarded, :GiveUp]]
+open_html_table(bouts[1:100,:])
+##
+path = joinpath(main_path,Exp,"Processed","full_PharmaData.csv")
+CSV.write(path, bouts)
+##
+fbouts = filter(r -> r.Phase != "None", bouts)
+path = joinpath(main_path,Exp,"Processed","filtered_PharmaData.csv")
+CSV.write(path, fbouts)
+open_html_table(fbouts[1:500,:])
 ##
 session = joinpath(main_path,Exp,"RawData",FileList[1])
 #=

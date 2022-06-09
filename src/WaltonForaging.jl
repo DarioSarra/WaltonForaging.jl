@@ -19,6 +19,7 @@ include(joinpath("RawDataPreprocess","RawData.jl"))
 include(joinpath("RawDataPreprocess","Countpokes.jl"))
 include(joinpath("RawDataPreprocess","TableRawData.jl"))
 include(joinpath("Bouts","TableBouts.jl"))
+include(joinpath("Bouts","ProcessTables.jl"))
 include(joinpath("GraphicalPredictions","FittingMVT.jl"))
 include(joinpath("GraphicalPredictions","BasicExponentials.jl"))
 
@@ -30,11 +31,10 @@ export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, funct
 export median, std
 export convert_in_table, table_raw_data
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!
-export preprocess_bouts, ismatch
+export process_foraging, preprocess_bouts, ismatch
 export get_rew_rate, env_get_rew_rate, patch_get_rew_rate, Poutcome
 export AbstractModel, RhoComparison, params, fit, init
 export EventDict, process_raw_session, process_bouts
-# export MVTtangent, fit_cumulative, GainModel
 export MVTtangent, fit_ExpoModel, ExpoModel
 export ParetoModel, fit_pareto
 export basic, inverse

@@ -5,8 +5,6 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
     end
     sort!(df1,[:Patch])
     df1[!,:Bout] = bdf.bout
-
-    # transform!(groupby(df1,:Patch), :RewardAvailable => count_bout_bypatch => :Bout)
     df1 = df1[:,[:Richness, :Travel,:State,:Poke,:ActivePort,
         :Port, :PokeIn, :PokeOut, :Duration,
         :Patch, :Bout,:RewardAvailable, :RewardConsumption,
@@ -27,6 +25,7 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
                 ForageTime_Sum = missing,
                 Pokes = missing,
                 Rewarded = missing,
+                RewardConsumption = missing,
                 )
                 for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
                         :Taskname, :Experimentname, :Startdate]
@@ -40,7 +39,8 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
                 ForageTime_Sum = sum(dd[forage_idx,:Duration]),
                 Pokes = length(forage_idx),
                 Rewarded = any(.!ismissing.(dd.RewardAvailable)),
-                # Giveup = any(ismatch.(r"^TravPoke",dd.Port))
+                RewardConsumption = isnothing(findfirst(.!ismissing.(dd.RewardConsumption))) ? missing :
+                    dd[findfirst(.!ismissing.(dd.RewardConsumption)),:RewardConsumption]
             )
             for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
                     :Taskname, :Experimentname, :Startdate]
@@ -51,6 +51,7 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
     end
     sort!(bouts,[:Patch,:Bout,:In])
     bouts[!,:GiveUp] = vcat(ismatch.(r"^Travel",bouts[2:end,:State]),[false])
+    bouts[!,:RewardLatency] = bouts.Out .- bouts.RewardConsumption
     bouts = bouts[:,[:In,:Out, :ForageTime_total, :ForageTime_Sum,
             :Pokes, :Rewarded, :GiveUp, :Bout,
             :Patch,:State,:Richness,:Travel, :ActivePort,
