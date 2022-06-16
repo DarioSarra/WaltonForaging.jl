@@ -3,32 +3,38 @@ ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (
 # Exp = "DAphotometry"
 Exp = "5HTPharma"
 fig_dir = joinpath(main_path,Exp, "Figures")
-pokes = CSV.read(joinpath(main_path,"Miscellaneous/States_Poke_data.csv"), DataFrame)
 ##
-FileList = readdir(joinpath(main_path,Exp,"RawData"))
-filter!(r -> ismatch(r".txt",r), FileList)
-filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
-filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
-##
+# FileList = readdir(joinpath(main_path,Exp,"RawData"))
+# filter!(r -> ismatch(r".txt",r), FileList)
+# filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
+# filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
 # AllPokes, AllBouts = process_foraging(main_path,Exp)
 # pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
 #     "src","RawDataPreprocess","PharmaRaquel.jl")
 # include(pharmainfo)
-# bout_path = joinpath(main_path,Exp,"Processed","AllBouts2_20220609.csv")
+# bout_path = joinpath(main_path,Exp,"Processed","AllBouts_20220615.csv")
 # CSV.write(bout_path, AllBouts)
-# pokes_path = joinpath(main_path,Exp,"Processed","AllPokes2_20220609.csv")
+# pokes_path = joinpath(main_path,Exp,"Processed","AllPokes_20220615.csv")
 # CSV.write(pokes_path, AllPokes)
 ##
-AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts2_20220609.csv"), DataFrame)
-AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes2_20220609.csv"), DataFrame)
+AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts_20220615.csv"), DataFrame)
+AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes_20220615.csv"), DataFrame)
 ##
-path = joinpath(main_path,Exp,"Processed","full_PharmaData.csv")
-CSV.write(path, bouts)
+check = combine(groupby(AllBouts,[:Phase,:Group,:Treatment,:MouseID]),
+    :Day => (x -> join(union(x),",")) => :Day,
+    :Richness => (x -> join(sort(union(x)),",")) => :Richness,
+    :Richness => (x -> length(union(x))) => :RichnessN,
+    :Travel => (x -> join(sort(union(skipmissing(x))),",")) => :Travel,
+    :Travel => (x -> length(union(skipmissing(x)))) => :TravelN,
+    )
+filter!(r -> r.Phase != "None", check)
+sort!(check,[:RichnessN,:TravelN])
+open_html_table(check)
 ##
-fbouts = filter(r -> r.Phase != "None", bouts)
-path = joinpath(main_path,Exp,"Processed","filtered_PharmaData.csv")
-CSV.write(path, fbouts)
-open_html_table(fbouts[1:500,:])
+union(AllBouts.MouseID)
+union(AllBouts.SubjectID)
+check_names = [ismatch(r"RP\d$",x) ? "RP0"*x[end] : x for x in union(AllBouts.SubjectID)]
+union(check_names)
 ## process_patches(AllBouts)
 unique(AllBouts.State)
 AllBouts.Reward
