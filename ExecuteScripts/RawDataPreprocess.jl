@@ -1,8 +1,16 @@
 using Revise, WaltonForaging
-ispath("/home/beatriz/Documents/") ? (main_path ="/home/beatriz/Documents/") : (main_path = "/Users/dariosarra/Documents/Lab/Walton/WaltonForaging")
+if ispath("/home/beatriz/Documents/")
+    main_path ="/home/beatriz/Documents/"
+elseif ispath("/Users/dariosarra/Documents/Lab/Walton/WaltonForaging")
+        main_path = "/Users/dariosarra/Documents/Lab/Walton/WaltonForaging"
+elseif ispath(joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging"))
+        main_path = joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging")
+end
 # Exp = "DAphotometry"
 Exp = "5HTPharma"
 fig_dir = joinpath(main_path,Exp, "Figures")
+##
+a = 0+34
 ##
 # FileList = readdir(joinpath(main_path,Exp,"RawData"))
 # filter!(r -> ismatch(r".txt",r), FileList)
@@ -26,6 +34,7 @@ check = combine(groupby(AllBouts,[:Phase,:Group,:Treatment,:MouseID]),
     :Richness => (x -> length(union(x))) => :RichnessN,
     :Travel => (x -> join(sort(union(skipmissing(x))),",")) => :Travel,
     :Travel => (x -> length(union(skipmissing(x)))) => :TravelN,
+    :Patch => maximum => :PatchesN
     )
 filter!(r -> r.Phase != "None", check)
 sort!(check,[:RichnessN,:TravelN])
