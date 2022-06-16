@@ -1,5 +1,5 @@
-AllPokes[!,:MouseID] = [ismatch(r"RP\d",x) ? "RP0"*x[end] : x for x in AllPokes.SubjectID]
-AllBouts[!,:MouseID] = [ismatch(r"RP\d",x) ? "RP0"*x[end] : x for x in AllBouts.SubjectID]
+AllPokes[!,:MouseID] = [ismatch(r"RP\d$",x) ? "RP0"*x[end] : x for x in AllPokes.SubjectID]
+AllBouts[!,:MouseID] = [ismatch(r"RP\d$",x) ? "RP0"*x[end] : x for x in AllBouts.SubjectID]
 AllPokes[!,:Day] = [x[1:10] for x in AllPokes.Startdate]
 AllBouts[!,:Day] = [x[1:10] for x in AllBouts.Startdate]
 ##

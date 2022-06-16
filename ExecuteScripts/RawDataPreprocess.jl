@@ -38,13 +38,16 @@ df1 = combine(groupby(AllBouts,[:MouseID,:Day,:Patch])) do dd
         Forage_tot = sum(skipmissing(dd[dd.State .== "Forage", :ForageTime_total])),
         Travel_sum = sum(skipmissing(dd[dd.State .== "Travel", :ForageTime_Sum])),
         Travel_tot = sum(skipmissing(dd[dd.State .== "Travel", :ForageTime_total])),
-        RewardLatency = mean(skipmissing(dd[dd.State .== "Forage", :ForageTime_Sum]))
+        RewardLatency = mean(skipmissing(dd[dd.State .== "Forage", :ForageTime_Sum])),
+        Bouts = nrow(dd[dd.State .== "Forage",:]),
+        Rewards = sum(skipmissing(dd.Rewarded))
     )
     for x in [:Richness,:Travel, :ActivePort, :Taskname, :Experimentname, :Startdate]
         df2[!,x] .= dd[1,x]
     end
     return df2
 end
+open_html_table(df1[1:100,:])
 ##
 test = filter(r -> r.State == "Forage", AllBouts)
 test.Richness = categorical(test.Richness)
