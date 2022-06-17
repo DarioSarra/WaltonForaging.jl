@@ -28,6 +28,12 @@ a = 0+34
 AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts_20220615.csv"), DataFrame)
 AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes_20220615.csv"), DataFrame)
 ##
+dropmissing(AllBouts)
+open_html_table(AllBouts[1:10,:])
+##
+cit  = filter(r->r.Phase == "Cit",dropmissing(AllBouts))
+fm1 = StatsBase.fit(MixedModel, @formula(ForageTime_Sum ~ 1 + Pokes + Richness + Travel + Treatment + (1+Richness*Pokes*Travel|MouseID)), cit)
+##
 check = combine(groupby(AllBouts,[:Phase,:Group,:Treatment,:MouseID]),
     :Day => (x -> join(union(x),",")) => :Day,
     :Richness => (x -> join(sort(union(x)),",")) => :Richness,
