@@ -11,21 +11,21 @@ Exp = "5HTPharma"
 fig_dir = joinpath(main_path,Exp, "Figures")
 
 ##
-FileList = readdir(joinpath(main_path,Exp,"RawData"))
-filter!(r -> ismatch(r".txt",r), FileList)
-filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
-filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
-AllPokes, AllBouts = process_foraging(main_path,Exp)
-pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
-    "src","RawDataPreprocess","PharmaRaquel.jl")
-include(pharmainfo)
-bout_path = joinpath(main_path,Exp,"Processed","AllBouts_20220626.csv")
-CSV.write(bout_path, AllBouts)
-pokes_path = joinpath(main_path,Exp,"Processed","AllPokes_20220626.csv")
-CSV.write(pokes_path, AllPokes)
+# FileList = readdir(joinpath(main_path,Exp,"RawData"))
+# filter!(r -> ismatch(r".txt",r), FileList)
+# filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
+# filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
+# AllPokes, AllBouts = process_foraging(main_path,Exp)
+# pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
+#     "src","RawDataPreprocess","PharmaRaquel.jl")
+# include(pharmainfo)
+# bout_path = joinpath(main_path,Exp,"Processed","AllBouts_20220627.csv")
+# CSV.write(bout_path, AllBouts)
+# pokes_path = joinpath(main_path,Exp,"Processed","AllPokes_20220627.csv")
+# CSV.write(pokes_path, AllPokes)
 ##
-AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts_20220615.csv"), DataFrame)
-AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes_20220615.csv"), DataFrame)
+AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts_20220627.csv"), DataFrame)
+AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes_20220627.csv"), DataFrame)
 ##
 dropmissing(AllBouts)
 open_html_table(AllBouts[1:10,:])
@@ -45,21 +45,24 @@ filter!(r -> r.Phase != "None", check)
 sort!(check,[:RichnessN,:TravelN])
 open_html_table(check)
 ##
-check = combine(groupby(AllBouts,[:Day,:MouseID]),
+check_bouts = combine(groupby(AllBouts,[:Day,:MouseID]),
     :Reward_p => (x -> sum(.!ismissing.(x))) => :Reward_p,
     :Reward_p => (x -> [union(x)]) => :Reward_p_cases,
     :Reward_c => (x -> sum(skipmissing(x))) => :Reward_c,
     :Patch => maximum)
-sort!(check,[:Day,:MouseID])
-open_html_table(filter(r -> r.Day >= "2021/03/01",check))
+sort!(check_bouts,[:Day,:MouseID])
+filter!(r -> r.Day >= "2021/03/01",check_bouts)
+open_html_table(check_bouts)
 # open_html_table(filter(r-> r.MouseID == "RP18" && r.Day == "2021/03/29", AllBouts))
 ##
-check = combine(groupby(AllPokes,[:Day,:MouseID]),
+check_pokes = combine(groupby(AllPokes,[:Day,:MouseID]),
     :RewardAvailable => (x -> sum(.!ismissing.(x))) => :Reward_p,
     :RewardDelivery => (x -> sum(.!ismissing.(x))) => :Reward_d,
     :RewardConsumption => (x -> sum(.!ismissing.(x))) => :Reward_c)
 sort!(check,[:Day,:MouseID])
-open_html_table(filter(r -> r.Day >= "2021/03/01",check))
+filter!(r -> r.Day >= "2021/03/01",check_pokes)
+open_html_table(check_pokes)
+##
 Import = CSV.read(joinpath(main_path,Exp,"Processed","AllSessionsSummary.csv"), DataFrame)
 open_html_table(Import)
 ##

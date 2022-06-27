@@ -57,11 +57,7 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
     end
     sort!(bouts,[:Patch,:Bout,:In])
     bouts[!,:GiveUp] = vcat(ismatch.(r"^Travel",bouts[2:end,:State]),[false])
-<<<<<<< HEAD
     bouts[!,:RewardLatency] = bouts.RewardConsumption .- bouts.RewardAvailable
-=======
-    bouts[!,:RewardLatency] =  bouts.RewardConsumption .- bouts.Out
->>>>>>> ec71286ba8b9cb92495dae0c8f332f5342e94a4a
     bouts = bouts[:,[:In,:Out, :ForageTime_total, :ForageTime_Sum,
             :Pokes, :Reward_p, :Reward_c, :RewardLatency, :GiveUp, :Bout,
             :Patch,:State,:Richness,:Travel, #:ActivePort,
