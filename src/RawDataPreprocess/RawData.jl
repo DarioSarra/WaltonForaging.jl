@@ -73,13 +73,13 @@ function process_raw_session(session_path::String; observe = false)
     pokes[!,:State] = find_task_state(pokes) #understand if the poke is during foraging or travelling
     pokes[:,:Port] = [get(PortDict,x, x) for x in pokes.Port] #tranlaste poke numbers to readable equivalent left, right and travel
     idx = findall(ismatch.(r"^reward_consumption_",pokes.Port))
-    #rewad consuption is used to count bouts/harvests
+    #reward consumption is used to count bouts/harvests
     for i in idx
         port = ismatch(r"left",pokes[i,:Port]) ? "RewLeft" : "RewRight"
         rewardedpoke = findprev(ismatch.(Regex(port),pokes.Port),i)
         pokes[rewardedpoke,:RewardConsumption] = pokes[i,:PokeIn]
     end
-    transform!(pokes,[:Port,:TravelComplete] => ((p,t)->activeside(p,t)) => :ActivePort)
+    # transform!(pokes,[:Port,:TravelComplete] => ((p,t)->activeside(p,t)) => :ActivePort)
     incorrectpokes!(pokes)
     transform!(pokes, :State => count_patches => :Patch)
     # check the travel duration looking at T values for pokes in travel state. The last patch might not have such info
@@ -108,7 +108,7 @@ function process_raw_session(session_path::String; observe = false)
     for (x,y) in session_info
         pokes[!, x] .= y
     end
-    pokes =  pokes[:,[:Richness, :Travel,:State,:Poke,:ActivePort,
+    pokes =  pokes[:,[:Richness, :Travel,:State,:Poke,#:ActivePort,
         :Incorrect,:Port, :PokeIn, :PokeOut, :Duration,
         :Patch, :P,#:Bout,:AlternativePatch,
         :TravelOnset,:TravelComplete,
@@ -264,10 +264,15 @@ function find_task_state(df::AbstractDataFrame)
     res = []
     # the order of updating travel and pushing is important to get the right state in each row
     for x in eachrow(df)
-        if ismatch(r"^poke_9", x.Port) && (!travel) && !ismissing(x.TravelOnset)
+        #if the animal is poking in the travel port and the state signals a travel onset, set travel true
+        if ismatch(r"^poke_9", x.Port) && !ismissing(x.TravelOnset) # && (!travel)
             travel = true
             push!(res, travel ? "Travel" : "Forage")
-        # elseif (travel) && (!ismissing(x.TravelComplete))
+            # catch if in the same poke the animal ends the travel via travel complete info
+            if !ismissing(x.TravelComplete)
+                travel = false
+            end
+        #if state signals start forage or  travel complete, set travel false
         elseif (travel) && ((ismatch(r"^start_forage_",x.Port)) || (!ismissing(x.TravelComplete)))
             push!(res, travel ? "Travel" : "Forage")
             travel = false
@@ -295,9 +300,11 @@ end
 activeside(x::String) = ismatch(r"start_forage_left",x) ? "Left" : "Right"
 
 function incorrectpokes!(df::AbstractDataFrame)
-    wrongside = @. !ismatch(Regex(df.ActivePort),df.Port) && ismatch(r"^Poke", df.Port)
+    # wrongside = @. !ismatch(Regex(df.ActivePort),df.Port) && ismatch(r"^Poke", df.Port)
     travelling = @. df.State == "Travel" && ismatch(r"(^Poke)|(^Rew)", df.Port)
-    df[!,:Incorrect] = @. wrongside || travelling
+    # df[!,:Incorrect] = @. wrongside || travelling
+    df[!,:Incorrect] = travelling
+
 end
 
 function count_patches(state_vec::AbstractVector)

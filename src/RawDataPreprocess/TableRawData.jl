@@ -12,9 +12,17 @@ function table_raw_data(lines, eachlines)
     maximum(prov.PokeIn_count) == maximum(prov.PokeOut_count)
     prov[!,:Poke] = Vector{Union{Missing,Int}}(missing,nrow(prov))
     clean_iterator = filter(x -> !ismissing(x) && x!=0 ,prov.PokeIn_count)
-    for x in clean_iterator#1:maximum(prov.PokeIn_count)
+    for x in clean_iterator
         prov[findfirst(prov.PokeIn_count .== x) : findfirst(prov.PokeOut_count .== x),
             :Poke] .= x
+    end
+    #iterates over events that were out of pokes and assign them to the last occurred poke
+    idx = findall(ismissing.(prov.Poke))
+    for i in idx
+        res = findprev(!ismissing,prov.Poke,i)
+        if !isnothing(res)
+            prov[i,:Poke] = prov[res,:Poke]
+        end
     end
     prov[!,:Rsync_count] = accumulate(+,[ismatch(r"rsync$",ev) for ev in prov.Event], init = 0)
     return prov

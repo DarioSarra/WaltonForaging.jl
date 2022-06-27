@@ -5,7 +5,8 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
     end
     sort!(df1,[:Patch])
     df1[!,:Bout] = bdf.bout
-    df1 = df1[:,[:Richness, :Travel,:State,:Poke,:ActivePort,
+    df1[!,:Bout_consumed] = bdf.bout_consumed
+    df1 = df1[:,[:Richness, :Travel,:State,:Poke,#:ActivePort,
         :Port, :PokeIn, :PokeOut, :Duration,
         :Patch, :Bout,:RewardAvailable, :RewardConsumption,
         :SubjectID, :Taskname, :Experimentname, :Startdate]]
@@ -24,10 +25,12 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
                 ForageTime_total = missing,
                 ForageTime_Sum = missing,
                 Pokes = missing,
-                Rewarded = missing,
+                Reward_p = missing,
+                Reward_c = missing,
+                RewardAvailable = missing,
                 RewardConsumption = missing,
                 )
-                for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
+                for x in [:Patch,:State,:Richness,:Travel,:SubjectID,# :ActivePort,
                         :Taskname, :Experimentname, :Startdate]
                     df2[!,x] .= dd[1,x]
                 end
@@ -38,11 +41,14 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
                 ForageTime_total = dd[forage_idx[end],:PokeOut] - dd[forage_idx[1],:PokeIn],
                 ForageTime_Sum = sum(dd[forage_idx,:Duration]),
                 Pokes = length(forage_idx),
-                Rewarded = any(.!ismissing.(dd.RewardAvailable)),
+                Reward_p = any(.!ismissing.(dd.RewardAvailable)),
+                Reward_c = any(.!ismissing.(dd.RewardConsumption)),
+                RewardAvailable = isnothing(findfirst(.!ismissing.(dd.RewardAvailable))) ? missing :
+                    dd[findfirst(.!ismissing.(dd.RewardAvailable)),:RewardAvailable],
                 RewardConsumption = isnothing(findfirst(.!ismissing.(dd.RewardConsumption))) ? missing :
                     dd[findfirst(.!ismissing.(dd.RewardConsumption)),:RewardConsumption]
             )
-            for x in [:Patch,:State,:Richness,:Travel, :ActivePort,:SubjectID,
+            for x in [:Patch,:State,:Richness,:Travel, :SubjectID,#:ActivePort,
                     :Taskname, :Experimentname, :Startdate]
                 df2[!,x] .= dd[forage_idx,x][1]
             end
@@ -51,10 +57,10 @@ function process_bouts(df0::AbstractDataFrame; observe = false)
     end
     sort!(bouts,[:Patch,:Bout,:In])
     bouts[!,:GiveUp] = vcat(ismatch.(r"^Travel",bouts[2:end,:State]),[false])
-    bouts[!,:RewardLatency] = bouts.Out .- bouts.RewardConsumption
+    bouts[!,:RewardLatency] = bouts.RewardConsumption .- bouts.RewardAvailable
     bouts = bouts[:,[:In,:Out, :ForageTime_total, :ForageTime_Sum,
-            :Pokes, :Rewarded, :RewardLatency, :GiveUp, :Bout,
-            :Patch,:State,:Richness,:Travel, :ActivePort,
+            :Pokes, :Reward_p, :Reward_c, :RewardLatency, :GiveUp, :Bout,
+            :Patch,:State,:Richness,:Travel, #:ActivePort,
             :SubjectID,:Taskname, :Experimentname, :Startdate
         ]]
 
@@ -65,6 +71,8 @@ end
 function count_bout_by_patch(df1)
     bdf = df1[:,[:Port,:RewardAvailable,:State]]
     bdf[!,:bout] .= 1
+    b = 1
+    bdf[!,:bout_consumed] .= 1
     c = 1
     bdf[!,:rewarding] .= false
     rewarding = false
@@ -73,6 +81,7 @@ function count_bout_by_patch(df1)
     bdf[!,:traveling] .= false
     traveling = false
     for r in eachrow(bdf)
+        !ismissing(r.RewardAvailable) && (b += 1)
         !ismissing(r.RewardAvailable) && (rewarding = true)
         rewarding && ismatch(r"^Rew",r.Port) && (rewarded = true)
         if rewarded && ismatch(r"^Poke",r.Port)
@@ -82,87 +91,17 @@ function count_bout_by_patch(df1)
         end
         if !traveling && ismatch(r"^Travel$", r.State)
             c += 1
+            b += 1
             traveling = true
         end
         if traveling && ismatch(r"^Forage$", r.State)
             traveling = false
         end
+        r.bout = b
         r.rewarding = rewarding
         r.rewarded = rewarded
         r.traveling = traveling
-        r.bout = c
+        r.bout_consumed = c
     end
     return bdf
 end
-# function count_bout(df::AbstractDataFrame)
-#     res = []
-#     c = 1
-#     # travel = false
-#     rewarded = false
-#     consumed = false
-#     state = df[1,:State]
-#     ## add consumed condition to change bout
-#     for r in eachrow(df)
-#         !ismissing(r.RewardAvailable) && (rewarded = true)
-#         (ismatch(r"^Rew",r.Port) && (rewarded == true)) && (consumed = true)
-#         if consumed && ismatch(r"^Poke",r.Port) && r.State == "Forage"
-#             rewarded = false
-#             consumed = false
-#             c += 1
-#             # elseif travel && ismatch(r"^P",r.Port) && r.State == "Forage"
-#             #     travel = false
-#             #     c += 1
-#         elseif r.State != state && ismatch(r"(^Poke)|(^Trav)",r.Port)
-#             state = r.State
-#             c += 1
-#         end
-#         # r.State == "Travel" ? (travel = true) : (travel = false)
-#         push!(res,c)
-#     end
-#     return res
-# end
-
-# function count_bout_bypatch(RewardAvailable)#df::AbstractDataFrame)
-#     c = 1
-#     res = []
-#     for r in RewardAvailable
-#         push!(res,c)
-#         !ismissing(r) && (c += 1)
-#     end
-#     return res
-# end
-
-function count_bout_bypatch(df)
-    res = []
-    c = 1
-    rewarding = false
-    rewarded = false
-    traveling = false
-    for r in eachrow(df)
-        !ismissing(r.RewardAvailable) && (rewarding = true)
-        rewarding && ismatch(r"^Rew",r.Port) && (rewarded = true)
-        if rewarded && ismatch(r"^Poke",r.Port)
-            c += 1
-            rewarded = false
-            rewarding = false
-        end
-        if !traveling && ismatch(r"^Travel$", r.State)
-            c += 1
-            traveling = true
-        end
-        if traveling && ismatch(r"^Forage$", r.State)
-            traveling = false
-        end
-        push!(res,c)
-    end
-    df[!,:Bout] = res
-    return df[:,[:Patch, :Bout,:Poke, :State, :ActivePort, :Port, :Incorrect, :PokeIn, :PokeOut, :Duration,
-        :Richness, :Travel, :P, :TravelComplete, :RewardAvailable, :RewardDelivery, :RewardConsumption,
-        :Rsync_count, :Rsync_time, :StateIn, :StateOut, :T, :AFT, :IFT, :SubjectID, :Taskname,
-        :Experimentname, :Startdate]]
-end
-
-# function count_bout_df(df)
-#     bdf = DataFrame(C = repmat([1], nrow(df)))
-#     bdf[!,]
-# end
