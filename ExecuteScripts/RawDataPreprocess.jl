@@ -51,22 +51,33 @@ check_bouts = combine(groupby(AllBouts,[:Day,:MouseID]),
     :Reward_c => (x -> sum(skipmissing(x))) => :Reward_c,
     :Patch => maximum)
 sort!(check_bouts,[:Day,:MouseID])
-filter!(r -> r.Day >= "2021/03/01",check_bouts)
-open_html_table(check_bouts)
+filter!(r -> "2021/03/01" <= r.Day <= "2021/04/02",check_bouts)
+open_html_table(AllPokes[1:100,:])
 # open_html_table(filter(r-> r.MouseID == "RP18" && r.Day == "2021/03/29", AllBouts))
 ##
 check_pokes = combine(groupby(AllPokes,[:Day,:MouseID]),
     :RewardAvailable => (x -> sum(.!ismissing.(x))) => :Reward_p,
     :RewardDelivery => (x -> sum(.!ismissing.(x))) => :Reward_d,
     :RewardConsumption => (x -> sum(.!ismissing.(x))) => :Reward_c)
-sort!(check,[:Day,:MouseID])
-filter!(r -> r.Day >= "2021/03/01",check_pokes)
+sort!(check_pokes,[:Day,:MouseID])
+filter!(r -> "2021/03/01" <= r.Day <= "2021/04/02",check_pokes)
 open_html_table(check_pokes)
 ##
 Import = CSV.read(joinpath(main_path,Exp,"Processed","AllSessionsSummary.csv"), DataFrame)
+Import[!,:Day_old] = Import.Day
+Import.Day = [join([x[7:10],x[4:5],x[1:2]], "/") for x in Import.Day_old]
+Import[!, :Subj] = Import.MouseID
+Import.MouseID = [length(string(x)) == 1 ?
+    "RP0" .* string(x) :
+    "RP" .* string(x)
+    for x in Import.Subj]
 open_html_table(Import)
 ##
-file = "RP18-2021-03-01-153105.txt"
+Import[!,:Session] = Import.MouseID .* "_" .* Import.Day
+check_bouts[!,:Session] = check_bouts.MouseID .* "_" .* check_bouts.Day
+check_pokes[!,:Session] = check_pokes.MouseID .* "_" .* check_pokes.Day
+##
+file = "RP3-2021-03-01-142103.txt"
 session_path = joinpath(main_path,Exp,"RawData",file)
 pokes = process_raw_session(session_path; observe = false)
 sum(.!ismissing.(pokes.RewardAvailable))
@@ -81,84 +92,20 @@ findall(.!ismissing.(pokes.RewardAvailable))
 findall((pokes.Incorrect) .&& (.!ismissing.(pokes.RewardAvailable)))
 open_html_table(pokes[400:460,:])
 ##
-sum(.!ismissing.(pokes.TravelComplete))
-change_idx = findall(ismatch.(r"^start_forage_",pokes.Port))
-
-sum(.!ismissing.(pokes.TravelComplete))
-##
+file = "RP3-2021-03-01-142103.txt"
+session_path = joinpath(main_path,Exp,"RawData",file)
 lines = readlines(session_path)
 eachlines = eachline(session_path)
-prov = table_raw_data(lines, eachlines) #translate the text document to an equivalent table
-idx = findall(ismissing.(prov.Poke))
-for i in idx
-    res = findprev(!ismissing,prov.Poke,i)
-    if !isnothing(res)
-        prov[i,:Poke] = prov[res,:Poke]
-    end
-end
-findall(ismissing.(prov.Poke))
-pokes = combine(groupby(prov, :Poke)) do dd
-    WaltonForaging.adjustevents(dd) ## groupby poke count to create a table with all info about each poke per row
-end
+events = table_raw_data(lines, eachlines) #translate the text document to an equivalent table
+events_path = joinpath(main_path,Exp,"Test","A_EventsTable.csv")
+CSV.write(events_path, events)
+pokes = process_raw_session(session_path; observe = false)
+pokes_path = joinpath(main_path,Exp,"Test","B_PokesTable.csv")
+CSV.write(pokes_path, pokes)
+bouts = process_bouts(pokes)
+bout_path = joinpath(main_path,Exp,"Test","C_BoutTable.csv")
+CSV.write(bout_path, bouts)
 
-sum(.!ismissing.(pokes.RewardAvailable))
-RichnessDict_keys = sort(collect(keys(countmap(pokes.IFT))))
-RichnessDict = Dict(x => y for (x,y) in zip(RichnessDict_keys,["rich", "medium", "poor", missing]))
-pokes[!,:State] = WaltonForaging.find_task_state(pokes) #understand if the poke is during foraging or travelling
-pokes[:,:Port] = [get(WaltonForaging.PortDict,x, x) for x in pokes.Port] #tranlaste poke numbers to readable equivalent left, right and travel
-idx = findall(ismatch.(r"^reward_consumption_",pokes.Port))
-for i in idx
-    port = ismatch(r"left",pokes[i,:Port]) ? "RewLeft" : "RewRight"
-    rewardedpoke = findprev(ismatch.(Regex(port),pokes.Port),i)
-    pokes[rewardedpoke,:RewardConsumption] = pokes[i,:PokeIn]
-end
-transform!(pokes,[:Port,:TravelComplete] => ((p,t)->WaltonForaging.activeside(p,t)) => :ActivePort)
-sum(.!ismissing.(pokes.RewardAvailable))
-WaltonForaging.incorrectpokes!(pokes)
-
-##
-transform!(pokes, :State => WaltonForaging.count_patches => :Patch)
-# check the travel duration looking at T values for pokes in travel state. The last patch might not have such info
-transform!(groupby(pokes,:Patch), [:T, :State] =>
-    ((t,s) -> WaltonForaging.determine_travel(t,s)) => :Travel)
-
-# shift Travel info to the following patch since travel duration affects following not preceeding behaviour
-pokes.Travel = vcat([missing],pokes[1:end-1, :Travel])
-transform!(groupby(pokes,:Patch), :IFT =>
-    (x -> WaltonForaging.determine_richness(x,RichnessDict)) => :Richness)
-#occasionally pokeout have missing values in that case it search for the poke_out value accoriding to the poke_out number
-checkPokeOut  = ismissing.(pokes.PokeOut) .&& ismatch.(r"^Poke",pokes.Port)
-if any(checkPokeOut)
-    for i in findall(checkPokeOut)
-        pnum = pokes[i,:Poke]
-        if ismissing(pokes[i,:Poke])
-            println("poke deleted skipping poke out time correction")
-            continue
-        end
-        pos = findfirst(prov.PokeOut_count .== pnum)
-        pokes[i,:PokeOut] = prov[pos,:Time]
-    end
-end
-pokes[!,:Duration] = pokes.PokeOut - pokes.PokeIn
-session_info = WaltonForaging.parseGlobalInfo(lines)
-for (x,y) in session_info
-    pokes[!, x] .= y
-end
-pokes =  pokes[:,[:Richness, :Travel,:State,:Poke,:ActivePort,
-    :Incorrect,:Port, :PokeIn, :PokeOut, :Duration,
-    :Patch, :P,#:Bout,:AlternativePatch,
-    :TravelOnset,:TravelComplete,
-    :RewardAvailable, :RewardDelivery, :RewardConsumption,
-    :Rsync_count, :Rsync_time, :StateIn, :StateOut, :T, :AFT, :IFT,
-    :SubjectID, :Taskname, :Experimentname, :Startdate]]
-sort!(pokes,:PokeIn)
-##
-
-##
-WaltonForaging.incorrectpokes!(pokes)
-sum(.!ismissing.(pokes.RewardAvailable))
-transform!(pokes, :State => count_patches => :Patch)
-open_html_table(pokes[3719:3735,:])
 ## process_patches(AllBouts)
 unique(AllBouts.State)
 AllBouts.Reward
