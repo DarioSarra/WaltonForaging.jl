@@ -2,7 +2,7 @@ module WaltonForaging
 
 using Reexport
 #add CSV@0.8.5
-@reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels
+@reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels, StandardizedPredictors, Effects
 @reexport using Optim, Distributions, Random
 @reexport using Polynomials
 @reexport using LsqFit, Roots
@@ -15,6 +15,7 @@ include("RewRateUpdates.jl")
 include("RhoComparison.jl")
 include("Loglikelihood.jl")
 include("ModelTests.jl")
+include(joinpath("RawDataPreprocess","Constants.jl"))
 include(joinpath("RawDataPreprocess","RawData.jl"))
 include(joinpath("RawDataPreprocess","Countpokes.jl"))
 include(joinpath("RawDataPreprocess","TableRawData.jl"))
@@ -26,7 +27,7 @@ include(joinpath("GraphicalPredictions","BasicExponentials.jl"))
 
 
 
-
+export InfoDict, PortDict
 export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, function_analysis
 export median, std
 export convert_in_table, table_raw_data
