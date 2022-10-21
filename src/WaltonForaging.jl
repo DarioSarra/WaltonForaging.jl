@@ -35,7 +35,7 @@ include(joinpath("GraphicalPredictions","BasicExponentials.jl"))
 export InfoDict, PortDict
 export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, function_analysis
 export median, std
-export renamerawtable!, parallelise_states, make_print_df, parallelise_prints
+export renamerawtable!, parallelise_states, make_print_df, parallelise_prints, init_values
 export findrichness!, findtravel!
 export process_rawtable
 ## Pre table import code
