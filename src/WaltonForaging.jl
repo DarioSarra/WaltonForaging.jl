@@ -16,6 +16,11 @@ include("RhoComparison.jl")
 include("Loglikelihood.jl")
 include("ModelTests.jl")
 include(joinpath("RawDataPreprocess","Constants.jl"))
+include(joinpath("RawDataPreprocess","PreprocessRawTables","ReshapeRawTable.jl"))
+include(joinpath("RawDataPreprocess","PreprocessRawTables","Richness&Travel.jl"))
+include(joinpath("RawDataPreprocess","PreprocessRawTables","ProcessPokes.jl"))
+
+
 include(joinpath("RawDataPreprocess","RawData.jl"))
 include(joinpath("RawDataPreprocess","Countpokes.jl"))
 include(joinpath("RawDataPreprocess","TableRawData.jl"))
@@ -26,10 +31,14 @@ include(joinpath("GraphicalPredictions","BasicExponentials.jl"))
 
 
 
-
+## Post table import code
 export InfoDict, PortDict
 export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, function_analysis
 export median, std
+export renamerawtable!, parallelise_states, make_print_df, parallelise_prints
+export findrichness!, findtravel!
+export process_rawtable
+## Pre table import code
 export convert_in_table, table_raw_data
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!
 export process_foraging, preprocess_bouts, ismatch

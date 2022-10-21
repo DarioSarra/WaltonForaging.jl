@@ -10,14 +10,14 @@ end
 Exp = "5HTPharma"
 ##
 rawt = CSV.read(joinpath(main_path,"data",Exp,"Processed","RawTable.csv"), DataFrame)
-PortDict
-rawt[!, :name] = [get(PortDict,x,x) for x in rawt.name]
-open_html_table(rawt[1:1000,:])
+open_html_table(rawt[1:500,:])
+df = process_rawtable(rawt)
 
-df = filter(r -> r.type == "print", rawt)
-open_html_table(df)
-line = df[1,:value]
-line = df[2,:value]
-line = df[3,:value]
+findrichness!(df)
+open_html_table(df[1:500,:])
 
-line[1:3] == "B#:"
+countmap(df.IFT)
+RichnessDict_keys  = sort(collect(keys(countmap(df.IFT))))
+RichnessDict = Dict(x => y for (x,y) in zip(RichnessDict_keys,[missing, "rich", "medium", "poor"]))
+
+df.IFT
