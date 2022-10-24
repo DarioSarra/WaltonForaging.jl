@@ -15,3 +15,7 @@ function process_rawtable(rawt)
                 :P, :T, :AFT, :IFT, :TT,
                 :ExperimentName, :TaskName, :TaskFileHash, :SetupID, :OriginalIndex, :type])
 end
+
+function process_pokes(df0)
+    
+end

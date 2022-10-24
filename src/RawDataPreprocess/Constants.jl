@@ -47,3 +47,10 @@ const PortDict = Dict(
     "poke_6"=>"RewRight",
     "poke_9"=>"TravPoke"
 )
+
+const PortStatusDict = Dict("PokeLeft" => "forage",
+    "RewLeft" => "reward",
+    "PokeRight" => "forage",
+    "RewRight" => "reward",
+    "TravPoke" => "travel"
+)

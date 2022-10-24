@@ -22,7 +22,7 @@ include(joinpath("RawDataPreprocess","PreprocessRawTables","ProcessPokes.jl"))
 
 
 include(joinpath("RawDataPreprocess","RawData.jl"))
-include(joinpath("RawDataPreprocess","Countpokes.jl"))
+include(joinpath("RawDataPreprocess","CountPokes.jl"))
 include(joinpath("RawDataPreprocess","TableRawData.jl"))
 include(joinpath("Bouts","TableBouts.jl"))
 include(joinpath("Bouts","ProcessTables.jl"))
@@ -32,7 +32,7 @@ include(joinpath("GraphicalPredictions","BasicExponentials.jl"))
 
 
 ## Post table import code
-export InfoDict, PortDict
+export InfoDict, PortDict, PortStatusDict
 export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, function_analysis
 export median, std
 export renamerawtable!, parallelise_states, make_print_df, parallelise_prints, init_values
