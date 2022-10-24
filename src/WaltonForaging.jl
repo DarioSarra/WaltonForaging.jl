@@ -37,7 +37,7 @@ export survivalrate_algorythm, cumulative_algorythm, hazardrate_algorythm, funct
 export median, std
 export renamerawtable!, parallelise_states, make_print_df, parallelise_prints, init_values
 export findrichness!, findtravel!
-export process_rawtable
+export process_rawtable, process_pokes
 ## Pre table import code
 export convert_in_table, table_raw_data
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!

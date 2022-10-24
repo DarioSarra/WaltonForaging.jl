@@ -1,21 +1,38 @@
-function process_rawtable(rawt)
-        renamerawtable!(rawt)
-        df = parallelise_states(rawt)
-        df2 = parallelise_prints(df,rawt)
-        df2[!, :globalstate] = readstate.(df.state)
-        findtravel!(df2)
-        correct_travelstart!(df2)
-        findrichness!(df2)
-        rename!(df2, :name => :Port, :B_n => :Block, :R_n => :Rew, :P_n => :Patch,
-                :RP_n => :RewInPatch, :RB_n => :RewInBlock, :PB_n => :PatchInBlock,
-                :time => :Time, :duration => :Duration, :globalstate => :Status, :Column1 => :OriginalIndex)
-        return select(df2,[:SubjectID, :StartDate, :Time, :Duration,:Port, :Rew,:Patch,
-                :Status,:Travel, :Richness,
-                :RewInPatch,:RewInBlock, :PatchInBlock, :Block,
-                :P, :T, :AFT, :IFT, :TT,
-                :ExperimentName, :TaskName, :TaskFileHash, :SetupID, :OriginalIndex, :type])
+function process_pokes(df0)
+    df1 = select(df0, [:SubjectID, :StartDate, :Time, :Duration,:Port, :Rew,:Patch,
+            :Status,:Travel, :Richness,
+            :RewInPatch,:RewInBlock, :PatchInBlock, :Block])
+    correct_pokes!(df1)
+    rewarded_pokes!(df1)
+    leaving_pokes!(df1)
+    df1[!,:Bouts] = vcat([1], cumsum(df1.Rewarded .|| df1.Leave)[1:end-1] .+1)
+    return df1
 end
 
-function process_pokes(df0)
-    
+function correct_pokes!(df)
+    df[!, :Correct] = [get(PortStatusDict,p,missing) == s for (p,s) in zip(df.Port,df.Status)]
+    idx = findall(ismissing.(df.Correct))
+    expected_missings = ["travel_tone_increment",
+        "travel_out_of_poke",
+        "travel_resumed",
+        "travel_complete",
+        "task_disengagment"]
+    if any(.![x in expected_missings for x in unique(df.Port[idx])])
+        error("found unknown event in $(expected_missings)")
+    else
+        dropmissing!(df,:Correct)
+        filter!(r -> r.Correct, df)
+    end
+end
+
+function rewarded_pokes!(df)
+    f_pokes = ismatch.(r"^Poke",df.Port)
+    shifted_rew = vcat(ismatch.(r"^reward$", df.Status)[2:end], [false])
+    df[!, :Rewarded] = convert(Vector{Bool},f_pokes .&& shifted_rew)
+end
+
+function leaving_pokes!(df)
+    f_pokes = ismatch.(r"^Poke",df.Port)
+    shifted_travel = vcat(ismatch.(r"^travel$", df.Status)[2:end], [false])
+    df[!, :Leave] = convert(Vector{Bool},f_pokes .&& shifted_travel)
 end

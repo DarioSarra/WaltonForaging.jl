@@ -1,3 +1,23 @@
+function process_rawtable(rawt)
+        renamerawtable!(rawt)
+        df = parallelise_states(rawt)
+        # rewards are counted when delivered so they are not like bouts. If animal leaves during an attempt but vefore getting
+        # a reward this will have the same value on the reward column
+        df2 = parallelise_prints(df,rawt)
+        df2[!, :globalstate] = readstate.(df.state)
+        findtravel!(df2) #first travel value is missing because the info refers to the previously experience travel
+        correct_travelstart!(df2)
+        findrichness!(df2)
+        rename!(df2, :name => :Port, :B_n => :Block, :R_n => :Rew, :P_n => :Patch,
+                :RP_n => :RewInPatch, :RB_n => :RewInBlock, :PB_n => :PatchInBlock,
+                :time => :Time, :duration => :Duration, :globalstate => :Status, :Column1 => :OriginalIndex)
+        return select(df2,[:SubjectID, :StartDate, :Time, :Duration,:Port, :Rew,:Patch,
+                :Status,:Travel, :Richness,
+                :RewInPatch,:RewInBlock, :PatchInBlock, :Block,
+                :state, :statetime, :P, :T, :AFT, :IFT, :TT,
+                :ExperimentName, :TaskName, :TaskFileHash, :SetupID, :OriginalIndex, :type])
+end
+
 function renamerawtable!(rawt)
         rename!(rawt, Symbol("Experiment name ") => :ExperimentName,
                 Symbol("Task name") => :TaskName,
@@ -41,7 +61,9 @@ function parallelise_prints(df_joint, rawt)
         gp_print = groupby(df_print,[:SubjectID, :StartDate])
         for (e_subdf, p_subdf) in zip(gp_ev, gp_print)
                 for e in eachrow(e_subdf)
-                        i = findlast(p_subdf.time .< e.time)
+                        # i = findlast(p_subdf.time .< e.time)
+                        # print line are stated after the events as a summary
+                        i = findfirst(p_subdf.time .> e.time)
                         isnothing(i) ? (idx = nrow(p_subdf)) : (idx = i)
                         for n in newcols
                                 e[n] = p_subdf[idx,n]
@@ -65,11 +87,6 @@ function extract_printinfo!(printdf)
         end
         gp = groupby(printdf,[:SubjectID, :StartDate])
         for sub_df in gp
-                # val_init = DataFrame(B_n = 1.0, R_n = 0.0, P_n = 1.0,
-                #         RP_n = 0.0, RB_n = 0.0, PB_n = 1.0,
-                #         P = 0.0, T = 0.0, AFT = 0.0, IFT = 0.0, TT = 0.0)
-                # idx = findfirst(ismatch.(r"AFT:",sub_df.value))
-                # update_values!(sub_df[idx,:value],val_init)
                 val_init = init_values(printdf)
                 for r in eachrow(sub_df)
                         line = r.value
