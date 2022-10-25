@@ -15,7 +15,6 @@ pokes = process_pokes(df)
 open_html_table(rawt[1:1000,:])
 open_html_table(df[1:500,:])
 open_html_table(pokes[1:5000,:])
-
 ##
 
 an_pokes = filter(r-> r.Status == "forage" &&
@@ -44,4 +43,6 @@ form = @formula(Leave ~ 1 + SummedForage + ElapsedForage + Bout + Rewarded + Ric
 
 form2 = @formula(Leave ~ 1 + SummedForage + Richness + Travel + (1|SubjectID))
 mdl = MixedModels.fit(MixedModel,form2, an_pokes, Bernoulli(); contrasts)
+
 unique(an_pokes.SubjectID)
+unique(an_pokes.StartDate)
