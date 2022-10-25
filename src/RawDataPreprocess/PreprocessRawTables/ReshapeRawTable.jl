@@ -1,10 +1,10 @@
 function process_rawtable(rawt)
-        renamerawtable!(rawt)
-        df = parallelise_states(rawt)
+        df0 = renamerawtable(rawt)
+        df1 = parallelise_states(df0)
         # rewards are counted when delivered so they are not like bouts. If animal leaves during an attempt but vefore getting
         # a reward this will have the same value on the reward column
-        df2 = parallelise_prints(df,rawt)
-        df2[!, :globalstate] = readstate.(df.state)
+        df2 = parallelise_prints(df1,df0)
+        df2[!, :globalstate] = readstate.(df1.state)
         findtravel!(df2) #first travel value is missing because the info refers to the previously experience travel
         correct_travelstart!(df2)
         findrichness!(df2)
@@ -18,14 +18,15 @@ function process_rawtable(rawt)
                 :ExperimentName, :TaskName, :TaskFileHash, :SetupID, :OriginalIndex, :type])
 end
 
-function renamerawtable!(rawt)
-        rename!(rawt, Symbol("Experiment name ") => :ExperimentName,
+function renamerawtable(rawt)
+        df = rename(rawt, Symbol("Experiment name ") => :ExperimentName,
                 Symbol("Task name") => :TaskName,
                 Symbol("Task file hash") => :TaskFileHash,
                 Symbol("Setup ID") => :SetupID,
                 Symbol("Subject ID") => :SubjectID,
                 Symbol("Start date") => :StartDate)
-        rawt[!, :name] = [get(PortDict,x,x) for x in rawt.name]
+        df[!, :name] = [get(PortDict,x,x) for x in df.name]
+        return df
 end
 
 function parallelise_states(rawt)
@@ -131,11 +132,15 @@ function readstate(line)
 end
 
 function correct_travelstart!(df)
-        gp = groupby(df,[:SubjectID, :StartDate])
+    gp = groupby(df,[:SubjectID, :StartDate])
         for subdf in gp
-                idxs = findall(subdf.globalstate .== "forage" .&& subdf.name .== "TravPoke")
-                for i in idxs
-                        subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
-                end
+        #find all travel pokes in forage state
+        idxs = findall(subdf.globalstate .== "forage" .&& subdf.name .== "TravPoke")
+        #loop into the found indexes
+        # check if the next poke would be in a travel state
+        # if true, updates the previous travel poke state to travel
+        for i in idxs
+            subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
         end
+    end
 end
