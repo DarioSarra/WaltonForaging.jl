@@ -12,16 +12,36 @@ Exp = "5HTPharma"
 rawt = CSV.read(joinpath(main_path,"data",Exp,"Processed","RawTable.csv"), DataFrame)
 df = process_rawtable(rawt)
 pokes = process_pokes(df)
-open_html_table(rawt[1:500,:])
+open_html_table(rawt[1:1000,:])
 open_html_table(df[1:500,:])
 open_html_table(pokes[1:5000,:])
 
-## to do Patch counting after travel complete, Summed forage time, delta forage time,
-function foragetimes!(df0)
-    df1 = filter(r -> r.Status == "forage", df0)
-    # count_bouts(rew_vec, leave_vec) = vcat([1], cumsum(rew_vec .|| leave_vec)[1:end-1] .+1)
-    transform!(groupby(df1,[:SubjectID,:StartDate,:Bout]),
-        :Duration => cumsum => :SummedForage,
-        :Time => ((t) -> t .- t[1]) => :ElapsedForage)
-    leftjoin!(df0,df1, on = propertynames(df0), matchmissing = :equal)
-end
+##
+
+an_pokes = filter(r-> r.Status == "forage" &&
+    !ismissing(r.Bout) &&
+    !ismissing(r.Travel),
+    pokes)
+
+contrasts = Dict(
+    :Richness => DummyCoding(; base ="medium"),
+    :Travel => DummyCoding(; base ="short"),
+    :Rewarded => DummyCoding(; base = false),
+    :Leave => DummyCoding(; base = false),
+
+    :Time => Center(1),
+    :Duration => Center(171),
+    :SummedForage => Center(683),
+    :ElapsedForage => Center(1361),
+    :Bout => Center(1),
+    :Trial => Center(1),
+
+    :SubjectID => Grouping()
+    )
+
+form = @formula(Leave ~ 1 + SummedForage + ElapsedForage + Bout + Rewarded + Richness +
+    (1|SubjectID) + (SummedForage|SubjectID) + (ElapsedForage|SubjectID) + (Bout|SubjectID) + (Rewarded|SubjectID) + (Richness|SubjectID))
+
+form2 = @formula(Leave ~ 1 + SummedForage + Richness + Travel + (1|SubjectID))
+mdl = MixedModels.fit(MixedModel,form2, an_pokes, Bernoulli(); contrasts)
+unique(an_pokes.SubjectID)

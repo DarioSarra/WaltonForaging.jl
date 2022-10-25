@@ -8,6 +8,10 @@ function process_pokes(df0)
     count_bouts!(df1)
     count_trials!(df1)
     foragetimes!(df1)
+    df1[!,:Richness] = categorical(df1.Richness)
+    levels!(df1.Richness,["poor","medium", "rich"])
+    df1[!,:Travel] = categorical(df1.Travel)
+    levels!(df1.Travel,["short", "long"])
     return df1
 end
 
@@ -69,7 +73,7 @@ function count_trials!(df)
             #sometimes it takes more than one traavel poke to get the print line
             #so we update until the first previous non-travel poke
             while dd[i,:Port] == "TravPoke"
-                dd[i,:Trial] = dd[i,:Trial] + 1
+                dd[i,:Trial] += 1
                 i-=1
             end
         end
