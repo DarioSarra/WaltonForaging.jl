@@ -8,15 +8,24 @@ elseif ispath(joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton"
 end
 # Exp = "DAphotometry"
 Exp = "5HTPharma"
-## To do adjust reward assignment shift
-rawt = CSV.read(joinpath(main_path,"data",Exp,"Processed","RawTable.csv"), DataFrame)
-df = process_rawtable(rawt)
+## Get raw data
+# rawt = CSV.read(joinpath(main_path,"data",Exp,"Processed","RawTable.csv"), DataFrame)
+# df = process_rawtable(rawt)
+# CSV.write(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"),df)
+df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), DataFrame)
+## Process pokes
+i = findall([!ismissing(r.name) && ismatch(r"poke_\d_out",r.name)  for r in eachrow(rawt)])
+findall(rawt[i,:time].> 2000)
+open_html_table(rawt[i-500:i+500,:])
+df[!,:SubjectID] = [ismatch(r"RP\d$",x) ? "RP0"*x[end] : x for x in df.SubjectID]
+unique(df[:, :SubjectID])
 pokes = process_pokes(df)
 open_html_table(rawt[1:1000,:])
 open_html_table(df[1:500,:])
 open_html_table(pokes[1:5000,:])
 ##
-
+x = pokes.StartDate[1]
+##
 an_pokes = filter(r-> r.Status == "forage" &&
     !ismissing(r.Bout) &&
     !ismissing(r.Travel),

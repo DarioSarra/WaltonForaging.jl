@@ -76,7 +76,8 @@ end
 
 function make_print_df(rawt)
         df_print = filter(r -> r.type == "print", rawt)
-        filter!(r -> !contains(r.value,"remaining_patches"), df_print)
+        filter!(r -> !contains(r.value,"remaining_patches") &&
+                !contains(r.value,"HOUSELIGHT"), df_print)
         select!(df_print,[:Column1,:type,:time, :value,:SubjectID,:StartDate])
         extract_printinfo!(df_print)
         return df_print
@@ -90,8 +91,7 @@ function extract_printinfo!(printdf)
         for sub_df in gp
                 val_init = init_values(printdf)
                 for r in eachrow(sub_df)
-                        line = r.value
-                        update_values!(line,val_init)
+                        update_values!(r,val_init)
                         for c in propertynames(val_init)
                                 r[c] = val_init[1, c]
                         end
@@ -112,7 +112,22 @@ function init_values(printdf)
         return val_init
 end
 
-function update_values!(line,val_df)
+function update_values!(row::DataFrameRow,val_df)
+        line = row.value
+        l1 = replace(line, "#" => "_n")
+        l2 = split(l1," ")
+        l3 = split.(l2, ":")
+        for l in l3
+                try
+                        val_df[1, Symbol(l[1])] = parse(Float64,l[2])
+                catch e
+                        print("can't find value for $(l[1]) in $(row.SubjectID) $(row.StartDate)")
+                        val_df[1, Symbol(l[1])] = missing
+                end
+        end
+end
+
+function update_values!(line::AbstractString, val_df)
         l1 = replace(line, "#" => "_n")
         l2 = split(l1," ")
         l3 = split.(l2, ":")
@@ -140,7 +155,11 @@ function correct_travelstart!(df)
         # check if the next poke would be in a travel state
         # if true, updates the previous travel poke state to travel
         for i in idxs
-            subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
+                if i == nrow(subdf)
+                        subdf[i,:globalstate] = "travel"
+                else
+                        subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
+                end
         end
     end
 end

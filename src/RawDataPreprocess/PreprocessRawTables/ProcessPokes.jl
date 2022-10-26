@@ -24,7 +24,7 @@ function correct_pokes!(df)
         "travel_complete",
         "task_disengagment"]
     if any(.![x in expected_missings for x in unique(df.Port[idx])])
-        error("found unknown event in $(expected_missings)")
+        error("found unknown event in $(unique(df.Port[idx])) for listed $(expected_missings)")
     else
         dropmissing!(df,:Correct)
         filter!(r -> r.Correct, df)
