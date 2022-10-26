@@ -6,26 +6,33 @@ elseif ispath("/Users/dariosarra/Documents/Lab/Walton/WaltonForaging")
 elseif ispath(joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging"))
         main_path = joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging")
 end
-# Exp = "DAphotometry"
-Exp = "5HTPharma"
+Exp = "DAphotometry"
+# Exp = "5HTPharma"
 fig_dir = joinpath(main_path,Exp, "Figures")
 
 ##
-# FileList = readdir(joinpath(main_path,Exp,"RawData"))
-# filter!(r -> ismatch(r".txt",r), FileList)
-# filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
-# filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
-# AllPokes, AllBouts = process_foraging(main_path,Exp)
-# pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
-#     "src","RawDataPreprocess","PharmaRaquel.jl")
-# include(pharmainfo)
-# bout_path = joinpath(main_path,Exp,"Processed","AllBouts_20220627.csv")
-# CSV.write(bout_path, AllBouts)
-# pokes_path = joinpath(main_path,Exp,"Processed","AllPokes_20220627.csv")
-# CSV.write(pokes_path, AllPokes)
+FileList = readdir(joinpath(main_path,Exp,"RawData"))
+filter!(r -> ismatch(r".txt",r), FileList)
+filter!(r -> !ismatch(r"RP10-2021-02-26-150714.txt",r), FileList) ##Incomplete file in Pharma data
+filter!(r -> !ismatch(r"RP10-2021-02-26-161201.txt",r), FileList) ##Incomplete file in Pharma data
+AllPokes, AllBouts = process_foraging(main_path,Exp)
+pharmainfo = joinpath(replace(@__DIR__,basename(@__DIR__)=>""),
+    "src","RawDataPreprocess","PharmaRaquel.jl")
+include(pharmainfo)
+bout_path = joinpath(main_path,Exp,"Processed","AllBouts_fp01.csv")
+CSV.write(bout_path, AllBouts)
+pokes_path = joinpath(main_path,Exp,"Processed","AllPokes_fp01.csv")
+CSV.write(pokes_path, AllPokes)
 ##
 AllBouts = CSV.read(joinpath(main_path,Exp,"Processed","AllBouts_20220627.csv"), DataFrame)
 AllPokes = CSV.read(joinpath(main_path,Exp,"Processed","AllPokes_20220627.csv"), DataFrame)
+##
+extrema(skipmissing(AllBouts[AllBouts.State .== "Travel",:ForageTime_Sum]))
+x = dropmissing(filter(r-> r.State == "Travel",AllBouts),:ForageTime_Sum)
+@df x histogram(:ForageTime_Sum, group = :Travel, xlims = (0,10000))
+open_html_table(sort(x,:ForageTime_Sum))
+##
+xx filter(r-> r)
 ##
 dropmissing(AllBouts)
 open_html_table(AllBouts[1:10,:])
@@ -98,14 +105,29 @@ lines = readlines(session_path)
 eachlines = eachline(session_path)
 events = table_raw_data(lines, eachlines) #translate the text document to an equivalent table
 events_path = joinpath(main_path,Exp,"Test","A_EventsTable.csv")
-CSV.write(events_path, events)
+# CSV.write(events_path, events)
 pokes = process_raw_session(session_path; observe = false)
 pokes_path = joinpath(main_path,Exp,"Test","B_PokesTable.csv")
-CSV.write(pokes_path, pokes)
+# CSV.write(pokes_path, pokes)
 bouts = process_bouts(pokes)
 bout_path = joinpath(main_path,Exp,"Test","C_BoutTable.csv")
-CSV.write(bout_path, bouts)
-
+# CSV.write(bout_path, bouts)
+##
+df1 = filter!(r -> !ismissing(r.Poke) && !r.Incorrect, pokes)
+bdf = combine(groupby(df1,:Patch)) do dd
+    WaltonForaging.count_bout_by_patch(dd)
+end
+sort!(df1,[:Patch])
+df1[!,:Bout] = bdf.bout
+df1[!,:Bout_consumed] = bdf.bout_consumed
+df1 = df1[:,[:Richness, :Travel,:State,:Poke,#:ActivePort,
+    :Port, :PokeIn, :PokeOut, :Duration,
+    :Patch, :Bout,:RewardAvailable, :RewardConsumption,
+    :SubjectID, :Taskname, :Experimentname, :Startdate]]
+##
+open_html_table(pokes[1:100,:])
+open_html_table(bouts[1:100,:])
+open_html_table(df1[1:100,:])
 ## process_patches(AllBouts)
 unique(AllBouts.State)
 AllBouts.Reward

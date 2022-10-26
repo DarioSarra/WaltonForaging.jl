@@ -81,11 +81,12 @@ function count_bout_by_patch(df1)
     bdf[!,:traveling] .= false
     traveling = false
     for r in eachrow(bdf)
-        !ismissing(r.RewardAvailable) && (b += 1)
+        # !ismissing(r.RewardAvailable) && (b += 1)
         !ismissing(r.RewardAvailable) && (rewarding = true)
         rewarding && ismatch(r"^Rew",r.Port) && (rewarded = true)
         if rewarded && ismatch(r"^Poke",r.Port)
             c += 1
+            b += 1
             rewarded = false
             ismissing(r.RewardAvailable) ? rewarding = false : rewarding = true
         end
