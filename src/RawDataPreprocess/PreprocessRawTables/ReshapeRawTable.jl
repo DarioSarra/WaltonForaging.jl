@@ -1,12 +1,12 @@
 function process_rawtable(rawt)
         df0 = renamerawtable(rawt)
-        df1 = parallelise_states(df0)
+        df1 = parallelise_states(df0)# move state info to a separate column
         # rewards are counted when delivered so they are not like bouts. If animal leaves during an attempt but vefore getting
         # a reward this will have the same value on the reward column
-        df2 = parallelise_prints(df1,df0)
+        df2 = parallelise_prints(df1,df0)# move print info to separate columns
         df2[!, :globalstate] = readstate.(df1.state)
-        findtravel!(df2) #first travel value is missing because the info refers to the previously experience travel
-        correct_travelstart!(df2)
+        findtravel!(df2) #first patch travel is missing because the info refers to the previously experience travel
+        correct_travelstart!(df2) #the travel info updat is printed after the first travel pokes so it needs to be shifted
         findrichness!(df2)
         rename!(df2, :name => :Port, :B_n => :Block, :R_n => :Rew, :P_n => :Patch,
                 :RP_n => :RewInPatch, :RB_n => :RewInBlock, :PB_n => :PatchInBlock,
@@ -144,22 +144,4 @@ function readstate(line)
         else
                 return "forage"
         end
-end
-
-function correct_travelstart!(df)
-    gp = groupby(df,[:SubjectID, :StartDate])
-        for subdf in gp
-        #find all travel pokes in forage state
-        idxs = findall(subdf.globalstate .== "forage" .&& subdf.name .== "TravPoke")
-        #loop into the found indexes
-        # check if the next poke would be in a travel state
-        # if true, updates the previous travel poke state to travel
-        for i in idxs
-                if i == nrow(subdf)
-                        subdf[i,:globalstate] = "travel"
-                else
-                        subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
-                end
-        end
-    end
 end

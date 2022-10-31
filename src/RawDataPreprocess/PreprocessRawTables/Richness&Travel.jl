@@ -13,6 +13,24 @@ function calc_travel(state,t_val)
     return res
 end
 
+function correct_travelstart!(df)
+    gp = groupby(df,[:SubjectID, :StartDate])
+        for subdf in gp
+        #find all travel pokes in forage state
+        idxs = findall(subdf.globalstate .== "forage" .&& subdf.name .== "TravPoke")
+        #loop into the found indexes
+        # check if the next poke would be in a travel state
+        # if true, updates the previous travel poke state to travel
+        for i in idxs
+                if i == nrow(subdf)
+                        subdf[i,:globalstate] = "travel"
+                else
+                        subdf[i+1,:globalstate] == "travel" && (subdf[i,:globalstate] = "travel")
+                end
+        end
+    end
+end
+
 function findrichness!(df)
     RichnessDict_keys = sort(collect(keys(countmap(df.IFT))))
     RichnessDict = Dict(x => y for (x,y) in zip(RichnessDict_keys,["rich", "medium", "poor"]))
