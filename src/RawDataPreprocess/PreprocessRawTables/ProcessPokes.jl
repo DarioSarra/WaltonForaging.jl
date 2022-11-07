@@ -83,15 +83,14 @@ function assign_bouts!(df, status,which)
         end
     end
 end
-#=# because patch count is updated after one or more travel pokes
+#= because patch count is updated after one or more travel pokes
     we need to backwards update some of the counting to include the first
     travel pokes
 =#
 function correct_counting!(df,original,corrected)
-
+    df[!,corrected] = Int64.(df[:, original])
     combine(groupby(df,[:SubjectID,:StartDate])) do dd
         idx = vcat(dd[1:end-1, original] .!= dd[2:end,original],false)
-        dd[!,corrected] = Int64.(dd[:, original])
         for i in findall(idx)
             #sometimes the printline output is delayed by a few travel pokes,
             #so we increment count by one until the first previous non-travel poke
