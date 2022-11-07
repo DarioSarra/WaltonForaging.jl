@@ -34,6 +34,9 @@ an_pokes = filter(r-> r.Status == "forage" &&
     !ismissing(r.Travel) &&
     r.Treatment == "Baseline",
     pokes)
+unique(an_pokes.Phase)
+open_html_table(an_pokes[1:500,:[:SubjectID, :Day, :Port,:Leave,:Rewarded,:Richness,:Travel,
+    :PokeInBout, :SummedForage, :ElapsedForage]])
 
 contrasts = Dict(
     :Richness => DummyCoding(; base ="medium"),
@@ -52,12 +55,9 @@ contrasts = Dict(
     :SubjectID => Grouping()
     )
 
-countmap(an_pokes.Day)
-median(an_pokes.Duration)
 form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial +
     (1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial|SubjectID))
 mdl1 = MixedModels.fit(MixedModel,form1, an_pokes, Bernoulli(); contrasts)
-
 
 form2 = @formula(Leave ~ 1 + SummedForage + Richness + Travel + (1|SubjectID))
 mdl2 = MixedModels.fit(MixedModel,form2, an_pokes, Bernoulli(); contrasts)

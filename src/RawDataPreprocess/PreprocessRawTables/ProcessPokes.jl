@@ -24,12 +24,14 @@ function process_pokes(df0)
             :RewardsInTrial, :RewardsInSeries, :RewardsInSession])
 end
 
+#remove pokes that are missiing eithere the in or out timestamp
 function remove_incomplete_pokes!(df)
     df[!,:Filt] = .![!ismissing(r.Port) && ismatch(r"poke_\d_out",r.Port)  for r in eachrow(df)]
     filter!(r-> r.Filt, df)
     select!(df,Not(:Filt))
 end
 
+#remove pokes performed in inactive ports depending on the task state
 function correct_pokes!(df)
     df[!, :Correct] = [get(PortStatusDict,p,missing) == s for (p,s) in zip(df.Port,df.Status)]
     idx = findall(ismissing.(df.Correct))
@@ -68,6 +70,9 @@ function count_bouts!(df0)
     assign_bouts!(df0,"travel", findnext)
 end
 
+#=bouts number is determined only for pokes happening in the forage state.
+the bout count is retroactively assigned to pokes in travel or reward state
+using findprev or findnext depending on the state=#
 function assign_bouts!(df, status,which)
     combine(groupby(df,[:SubjectID,:StartDate])) do dd
         idx = findall(ismissing.(dd.Bout) .&& dd.Status .== status)
@@ -78,9 +83,12 @@ function assign_bouts!(df, status,which)
         end
     end
 end
-
+#=# because patch count is updated after one or more travel pokes
+    we need to backwards update some of the counting to include the first
+    travel pokes
+=#
 function correct_counting!(df,original,corrected)
-    # because patch is updated after the first travel poke we need to backwards update the trial count
+
     combine(groupby(df,[:SubjectID,:StartDate])) do dd
         idx = vcat(dd[1:end-1, original] .!= dd[2:end,original],false)
         dd[!,corrected] = Int64.(dd[:, original])
@@ -97,27 +105,16 @@ function correct_counting!(df,original,corrected)
 end
 
 function count_trials!(df)
-    # because patch is updated after the first travel poke we need to backwards update the trial count
-    # combine(groupby(df,[:SubjectID,:StartDate])) do dd
-    #     idx = vcat(dd[1:end-1, :Patch] .!= dd[2:end,:Patch],false)
-    #     dd[!,:Trial] = Int64.(dd.Patch)
-    #     for i in findall(idx)
-    #         #sometimes it takes more than one traavel poke to get the print line
-    #         #so we increment trial count by one until the first previous non-travel poke
-    #         while dd[i,:Port] == "TravPoke"
-    #             dd[i,:Trial] += 1
-    #             i -= 1
-    #             i == 0 && break
-    #         end
-    #     end
-    # end
-    transform!(groupby(df,[:SubjectID,:StartDate,:Series]),
-        :Leave => (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :TrialInSeries,
-        :SubjectID => (x -> 1:length(x)) => :PokeInSeries)
-    transform!(groupby(df,[:SubjectID,:StartDate,:Trial]),
-        :SubjectID => (x -> 1:length(x)) => :PokeInTrial)
     transform!(groupby(df,[:SubjectID,:StartDate,:Bout,:Status]),
         :SubjectID => (x -> 1:length(x)) => :PokeInBout)
+
+    transform!(groupby(df,[:SubjectID,:StartDate,:Trial,:Status]),
+        :SubjectID => (x -> 1:length(x)) => :PokeInTrial)
+
+    transform!(groupby(df,[:SubjectID,:StartDate,:Series,:Status]),
+        :Leave => (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :TrialInSeries,
+        :SubjectID => (x -> 1:length(x)) => :PokeInSeries)
+
 end
 
 function foragetimes!(df)

@@ -33,7 +33,7 @@ function RaquelPharmaCalendar!(df)
     ## define treatment accoridng to phase and weekday
     df[!,:Treatment] .= "None"
     for (key, subdf) in pairs(groupby(df,[:Phase,:Group, :Day]))
-        key.Phase == "None" || key.Phase == "Trained" && continue
+        ((key.Phase == "None") || (key.Phase == "Trained")) && continue
         if ismonday(key.Day)
             if key.Group == "A"
                 subdf[!,:Treatment] .= "VEH"
