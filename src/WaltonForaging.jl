@@ -3,7 +3,7 @@ module WaltonForaging
 using Reexport
 #add CSV@0.8.5
 @reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels, StandardizedPredictors, Effects
-@reexport using Optim, Distributions, Random
+@reexport using Optim, Distributions, Random, Dates
 @reexport using Polynomials
 @reexport using LsqFit, Roots
 import Statistics: median, std
@@ -16,6 +16,7 @@ include("RhoComparison.jl")
 include("Loglikelihood.jl")
 include("ModelTests.jl")
 include(joinpath("RawDataPreprocess","Constants.jl"))
+include(joinpath("RawDataPreprocess","RaquelPharma.jl"))
 include(joinpath("RawDataPreprocess","PreprocessRawTables","ReshapeRawTable.jl"))
 include(joinpath("RawDataPreprocess","PreprocessRawTables","Richness&Travel.jl"))
 include(joinpath("RawDataPreprocess","PreprocessRawTables","ProcessPokes.jl"))
@@ -38,6 +39,8 @@ export median, std
 export renamerawtable, parallelise_states, make_print_df, parallelise_prints, init_values
 export findrichness!, findtravel!
 export process_rawtable, process_pokes
+export RaquelPharmaCalendar!
+
 ## Pre table import code
 export convert_in_table, table_raw_data
 export preprocess_pokes!, trial_info!, bout_info!, travel_info!, leave_info!

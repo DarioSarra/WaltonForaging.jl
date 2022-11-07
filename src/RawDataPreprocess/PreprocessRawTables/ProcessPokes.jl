@@ -2,17 +2,32 @@ function process_pokes(df0)
     df1 = select(df0, [:SubjectID, :StartDate, :Time, :Duration,:Port, :Rew,:Patch,
             :Status,:Travel, :Richness,
             :RewInPatch,:RewInBlock, :PatchInBlock, :Block])
+    remove_incomplete_pokes!(df1)
     correct_pokes!(df1)
     rewarded_pokes!(df1)
     leaving_pokes!(df1)
     count_bouts!(df1)
+    correct_counting!(df1,:Patch,:Trial)
+    correct_counting!(df1,:Block,:Series)
     count_trials!(df1)
     foragetimes!(df1)
+    collectedrewards!(df1)
     df1[!,:Richness] = categorical(df1.Richness)
     levels!(df1.Richness,["poor","medium", "rich"])
     df1[!,:Travel] = categorical(df1.Travel)
     levels!(df1.Travel,["short", "long"])
-    return df1
+    return select(df1,[:SubjectID, :StartDate, :Status, :Port,
+            :Time, :Duration, :SummedForage, :ElapsedForage,
+            :Rewarded, :Leave,
+            :Bout, :Trial, :Series, :Travel, :Richness,
+            :PokeInBout, :PokeInTrial, :TrialInSeries,
+            :RewardsInTrial, :RewardsInSeries, :RewardsInSession])
+end
+
+function remove_incomplete_pokes!(df)
+    df[!,:Filt] = .![!ismissing(r.Port) && ismatch(r"poke_\d_out",r.Port)  for r in eachrow(df)]
+    filter!(r-> r.Filt, df)
+    select!(df,Not(:Filt))
 end
 
 function correct_pokes!(df)
@@ -64,27 +79,62 @@ function assign_bouts!(df, status,which)
     end
 end
 
-function count_trials!(df)
+function correct_counting!(df,original,corrected)
     # because patch is updated after the first travel poke we need to backwards update the trial count
     combine(groupby(df,[:SubjectID,:StartDate])) do dd
-        idx = vcat(dd[1:end-1, :Patch] .!= dd[2:end,:Patch],false)
-        dd[!,:Trial] = Int64.(dd.Patch)
+        idx = vcat(dd[1:end-1, original] .!= dd[2:end,original],false)
+        dd[!,corrected] = Int64.(dd[:, original])
         for i in findall(idx)
-            #sometimes it takes more than one traavel poke to get the print line
-            #so we update until the first previous non-travel poke
+            #sometimes the printline output is delayed by a few travel pokes,
+            #so we increment count by one until the first previous non-travel poke
             while dd[i,:Port] == "TravPoke"
-                dd[i,:Trial] += 1
-                i-=1
+                dd[i,corrected] += 1
+                i -= 1
+                i == 0 && break
             end
         end
     end
 end
 
-function foragetimes!(df0)
-    # df1 = filter(r -> r.Status == "forage", df0)
-    # count_bouts(rew_vec, leave_vec) = vcat([1], cumsum(rew_vec .|| leave_vec)[1:end-1] .+1)
-    transform!(groupby(df0,[:SubjectID,:StartDate,:Bout,:Status]),
+function count_trials!(df)
+    # because patch is updated after the first travel poke we need to backwards update the trial count
+    # combine(groupby(df,[:SubjectID,:StartDate])) do dd
+    #     idx = vcat(dd[1:end-1, :Patch] .!= dd[2:end,:Patch],false)
+    #     dd[!,:Trial] = Int64.(dd.Patch)
+    #     for i in findall(idx)
+    #         #sometimes it takes more than one traavel poke to get the print line
+    #         #so we increment trial count by one until the first previous non-travel poke
+    #         while dd[i,:Port] == "TravPoke"
+    #             dd[i,:Trial] += 1
+    #             i -= 1
+    #             i == 0 && break
+    #         end
+    #     end
+    # end
+    transform!(groupby(df,[:SubjectID,:StartDate,:Series]),
+        :Leave => (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :TrialInSeries,
+        :SubjectID => (x -> 1:length(x)) => :PokeInSeries)
+    transform!(groupby(df,[:SubjectID,:StartDate,:Trial]),
+        :SubjectID => (x -> 1:length(x)) => :PokeInTrial)
+    transform!(groupby(df,[:SubjectID,:StartDate,:Bout,:Status]),
+        :SubjectID => (x -> 1:length(x)) => :PokeInBout)
+end
+
+function foragetimes!(df)
+    transform!(groupby(df,[:SubjectID,:StartDate,:Bout,:Status]),
         :Duration => cumsum => :SummedForage,
         [:Time, :Duration] => ((in,dur) -> in .+ dur .- in[1]) => :ElapsedForage)
-    # leftjoin!(df0,df1, on = propertynames(df0), matchmissing = :equal)
+
+end
+
+function collectedrewards!(df)
+    # transform!(groupby(df,[:SubjectID,:StartDate]), :Rew => (x -> x .- 1) => :RewardsInSession)
+    # transform!(groupby(df,[:SubjectID,:StartDate,:Trial]), :Rew => (x -> x .- 1) => :RewardsInTrial)
+    transform!(groupby(df,[:SubjectID,:StartDate]), :Rewarded =>
+        (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :RewardsInSession)
+    transform!(groupby(df,[:SubjectID,:StartDate,:Series]), :Rewarded =>
+        (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :RewardsInSeries)
+    transform!(groupby(df,[:SubjectID,:StartDate,:Trial]), :Rewarded =>
+        (x -> Int64.(vcat([0],cumsum(x[1:end-1])))) => :RewardsInTrial)
+
 end
