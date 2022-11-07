@@ -17,8 +17,8 @@ df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), Da
 # open_html_table(df[1:500,:])
 ## Process pokes
 pokes = process_pokes(df)
-open_html_table(pokes[1:500,:])
-CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),df)
+# open_html_table(pokes[1:500,:])
+# CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),df)
 # pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 ##
 unique(pokes[:, :SubjectID])
@@ -28,16 +28,11 @@ unique(pokes[:, :SubjectID])
 RaquelPharmaCalendar!(pokes)
 open_html_table(pokes[1:500,:])
 countmap(pokes.Treatment)
-unique(sort(pokes.Day))
-Date(2021,02,28) in unique(sort(pokes.Day))
-ismonday = x->Dates.dayofweek(x) == Dates.Monday;
-issunday = x->Dates.dayofweek(x) == Dates.Sunday;
-Dates.toprev(issunday, Date(2021,03,01))
 ##
 an_pokes = filter(r-> r.Status == "forage" &&
     !ismissing(r.Bout) &&
     !ismissing(r.Travel) &&
-    r.Phase == "CIT",
+    r.Treatment == "Baseline",
     pokes)
 
 contrasts = Dict(
@@ -47,9 +42,9 @@ contrasts = Dict(
     :Leave => DummyCoding(; base = false),
 
     :Time => Center(1),
-    :Duration => Center(median(an_pokes.Duration)),
-    :SummedForage => Center(median(an_pokes.SummedForage)),
-    :ElapsedForage => Center(median(an_pokes.ElapsedForage)),
+    :Duration => Center(median(skipmissing(an_pokes.Duration))),
+    :SummedForage => Center(median(skipmissing(an_pokes.SummedForage))),
+    :ElapsedForage => Center(median(skipmissing(an_pokes.ElapsedForage))),
     :PokeInBout	=> Center(1),
     :RewardsInTrial => Center(0),
     :Trial => Center(1),
@@ -58,7 +53,7 @@ contrasts = Dict(
     )
 
 countmap(an_pokes.Day)
-
+median(an_pokes.Duration)
 form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial +
     (1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial|SubjectID))
 mdl1 = MixedModels.fit(MixedModel,form1, an_pokes, Bernoulli(); contrasts)
