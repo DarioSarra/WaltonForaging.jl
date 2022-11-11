@@ -17,11 +17,12 @@ df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), Da
 # open_html_table(df[1:500,:])
 ## Process pokes
 # pokes = process_pokes(df)
-# open_html_table(pokes[1:500,:])
-# CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),df)
+open_html_table(pokes[1:500,:])
+# CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 ##
-process_bouts(pokes)
+bouts = process_bouts(pokes)
+open_html_table(bouts[1:500,:])
 ##
 unique(pokes[:, :SubjectID])
 transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
