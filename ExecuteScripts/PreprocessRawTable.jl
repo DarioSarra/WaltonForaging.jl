@@ -16,13 +16,47 @@ Exp = "5HTPharma"
 df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), DataFrame)
 # open_html_table(df[1:500,:])
 ## Process pokes
-# pokes = process_pokes(df)
-open_html_table(pokes[1:500,:])
-# CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
+pokes = process_pokes(df)
+CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 ##
 bouts = process_bouts(pokes)
+open_html_table(df[1:5000,:])
+open_html_table(pokes[1:500,:])
 open_html_table(bouts[1:500,:])
+##
+r = findall(ismatch.(r"reward",df.state))
+t = findall(ismatch.(r"Trav",df.Port))
+res = [trav - r[findfirst(r.> trav) - 1] for trav in t]
+idx = findall(res.<=2)
+i = t[idx[2]]
+    open_html_table(df[i-10:i+10,:])
+##
+patch = 43
+mouse = "RP01"
+date = "2021/02/05 13:35:04"
+open_html_table(filter(r-> r.SubjectID == mouse &&
+    r.StartDate == date &&
+    (patch <= r.Patch <= patch +1),
+    df))
+open_html_table(filter(r-> r.SubjectID == mouse &&
+    r.StartDate == date &&
+    (patch <= r.Trial <= patch +1),
+    pokes))
+##
+WaltonForaging.leaving_pokes!(pokes)
+##
+trav = ismatch.(r"travel",pokes.Status)
+change = vcat(0, diff(trav))
+idx = findall(change.==1)
+
+##
+detect_category_change(r"Trav",true,"Travel")
+detect_travel_change(false,"travel")
+res = accumulate(detect_travel_change, string.(pokes.Status), init = 0)
+findall(res)
+pokes.Status
+accumulate(detect_category_change)
 ##
 unique(pokes[:, :SubjectID])
 transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
