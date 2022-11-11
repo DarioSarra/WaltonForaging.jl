@@ -49,15 +49,46 @@ function correct_pokes!(df)
 end
 
 function rewarded_pokes!(df)
-    f_pokes = ismatch.(r"^Poke",df.Port)
-    shifted_rew = vcat(ismatch.(r"^reward$", df.Status)[2:end], [false])
-    df[!, :Rewarded] = convert(Vector{Bool},f_pokes .&& shifted_rew)
+    # #find all pokes in foraging port
+    # f_pokes = ismatch.(r"^Poke",df.Port)
+    # #find all rewarded status and shifts to the previous poke
+    # shifted_rew = vcat(ismatch.(r"^reward$", df.Status)[2:end], [false])
+    # #if a forage poke (f_pokes) was followed by the reward status (shifted_rew) that poke is counted as rewarded
+    # df[!, :Rewarded] = convert(Vector{Bool},f_pokes .&& shifted_rew)
+    # add Rewarded column
+    df[!, :Rewarded] .= false
+    # group by session
+    combine(groupby(df,[:SubjectID, :StartDate])) do dd
+        trav = ismatch.(r"reward",dd.Status) #transform status categories to bitvector [1 reward, 0 not reward]
+        change = vcat(0, diff(trav)) # identifies changes in status [+1 begin reward, -1 end reward]
+        idx = findall(change.==1) #find all reward state begininnings
+        for i in idx
+            # for each reward begins find previous poke in a forage port
+            prev_poke = findprev(ismatch.(r"^Poke",dd.Port),i)
+            # set leave of that forage port True
+            dd[prev_poke,:Rewarded] = true
+        end
+    end
 end
 
 function leaving_pokes!(df)
-    f_pokes = ismatch.(r"^Poke",df.Port)
-    shifted_travel = vcat(ismatch.(r"^travel$", df.Status)[2:end], [false])
-    df[!, :Leave] = convert(Vector{Bool},f_pokes .&& shifted_travel)
+    # f_pokes = ismatch.(r"^Poke",df.Port)
+    # shifted_travel = vcat(ismatch.(r"^travel$", df.Status)[2:end], [false])
+    # df[!, :Leave] = convert(Vector{Bool},f_pokes .&& shifted_travel)
+    # add leave column
+    df[!, :Leave] .= false
+    # group by session
+    combine(groupby(df,[:SubjectID, :StartDate])) do dd
+        trav = ismatch.(r"travel",dd.Status) #transform status categories to bitvector [1 travel, 0 not travel]
+        change = vcat(0, diff(trav)) # identifies changes in status [+1 begin travel, -1 end travel]
+        idx = findall(change.==1) #find all travel state begininnings
+        for i in idx
+            # for each travel begins find previous poke in a forage port
+            prev_poke = findprev(ismatch.(r"^Poke",dd.Port),i)
+            # set leave of that forage port True
+            dd[prev_poke,:Leave] = true
+        end
+    end
 end
 
 function count_bouts!(df0)

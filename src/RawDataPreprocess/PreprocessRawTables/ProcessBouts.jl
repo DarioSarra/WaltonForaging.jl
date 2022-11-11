@@ -7,7 +7,7 @@ function process_bouts(df0)
             ForagePokes = nrow(f_dd),
             TravelPokes = nrow(t_dd)
         )
-        for c in [:Trial, :Port, :Rewarded, :Richness, :Travel, :Leave]
+        for c in [:Trial, :Port, :Rewarded, :Richness, :Travel, :Leave, :Status]
             nrow(f_dd) == 0 ? (val = 0) : (val = f_dd[end, c])
             prov_df[!,c] .= val
         end
@@ -19,5 +19,7 @@ function process_bouts(df0)
         end
         return prov_df
     end
+    transform!(groupby(df2,[:SubjectID,:StartDate,:Trial]), :Rewarded => cumsum => :RewardsInTrial)
+    transform!(groupby(df2,[:SubjectID,:StartDate]), :Rewarded => cumsum => :RewardsInSession)
     return df2
 end
