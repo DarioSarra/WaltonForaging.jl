@@ -91,6 +91,15 @@ function leaving_pokes!(df)
     end
 end
 
+"""
+    'count_bouts!(df0)'
+
+    Count bouts by session, starting from one and incrementing whenever a reward
+    or a leaving occurs. Bout conunts is performed only on foraging pokes, then
+    is retroactively updated on reward and travel pokes.
+    if an animal session is interrupted during a unfinished travel the bout
+    count of those pokes will be 'missing'
+"""
 function count_bouts!(df0)
     df1 = filter(r -> r.Status == "forage", df0)
     count_bouts(rew_vec, leave_vec) = vcat([1], cumsum(rew_vec .|| leave_vec)[1:end-1] .+1)

@@ -44,19 +44,7 @@ open_html_table(filter(r-> r.SubjectID == mouse &&
     (patch <= r.Trial <= patch +1),
     pokes))
 ##
-WaltonForaging.leaving_pokes!(pokes)
-##
-trav = ismatch.(r"travel",pokes.Status)
-change = vcat(0, diff(trav))
-idx = findall(change.==1)
-
-##
-detect_category_change(r"Trav",true,"Travel")
-detect_travel_change(false,"travel")
-res = accumulate(detect_travel_change, string.(pokes.Status), init = 0)
-findall(res)
-pokes.Status
-accumulate(detect_category_change)
+length(findall(Bool.(pokes.Rewarded) .&& Bool.(pokes.Leave))) / length(findall(Bool.(pokes.Leave)))
 ##
 unique(pokes[:, :SubjectID])
 transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
@@ -66,6 +54,23 @@ RaquelPharmaCalendar!(pokes)
 open_html_table(pokes[1:500,:])
 countmap(pokes.Treatment)
 ##
+contrasts = Dict(
+    :Richness => DummyCoding(; base ="medium"),
+    :Travel => DummyCoding(; base ="short"),
+    :Rewarded => DummyCoding(; base = false),
+    :Leave => DummyCoding(; base = false),
+
+    :Time => Center(1),
+    :Duration => Center(1),
+    :SummedForage => Center(1),
+    :ElapsedForage => Center(1),
+    :PokeInBout	=> Center(1),
+    :RewardsInTrial => Center(0),
+    :Trial => Center(1),
+
+    :SubjectID => Grouping()
+    )
+##
 an_pokes = filter(r-> r.Status == "forage" &&
     !ismissing(r.Bout) &&
     !ismissing(r.Travel) &&
@@ -74,23 +79,6 @@ an_pokes = filter(r-> r.Status == "forage" &&
 unique(an_pokes.Phase)
 open_html_table(an_pokes[1:500,:[:SubjectID, :Day, :Port,:Leave,:Rewarded,:Richness,:Travel,
     :PokeInBout, :SummedForage, :ElapsedForage]])
-
-contrasts = Dict(
-    :Richness => DummyCoding(; base ="medium"),
-    :Travel => DummyCoding(; base ="short"),
-    :Rewarded => DummyCoding(; base = false),
-    :Leave => DummyCoding(; base = false),
-
-    :Time => Center(1),
-    :Duration => Center(median(skipmissing(an_pokes.Duration))),
-    :SummedForage => Center(median(skipmissing(an_pokes.SummedForage))),
-    :ElapsedForage => Center(median(skipmissing(an_pokes.ElapsedForage))),
-    :PokeInBout	=> Center(1),
-    :RewardsInTrial => Center(0),
-    :Trial => Center(1),
-
-    :SubjectID => Grouping()
-    )
 
 form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial +
     (1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial|SubjectID))
@@ -102,3 +90,4 @@ mdl2 = MixedModels.fit(MixedModel,form2, an_pokes, Bernoulli(); contrasts)
 unique(an_pokes.SubjectID)
 unique(an_pokes.StartDate)
 unique(an_pokes.Port)
+##

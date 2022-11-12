@@ -1,5 +1,7 @@
 function process_bouts(df0)
-    df1 = filter(r->r.Status != "reward", df0)
+    df1 = filter(r->r.Status != "reward" && #removes pokes in the reward port
+        !ismissing(r.Bout), #remove bout of pokes in the travel port at the end of the session
+         df0)
     df2 = combine(groupby(df1,[:SubjectID,:StartDate,:Bout])) do dd
         f_dd = filter(r->r.Status == "forage", dd)
         t_dd = filter(r->r.Status == "travel", dd)
