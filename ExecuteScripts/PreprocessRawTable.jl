@@ -25,6 +25,12 @@ open_html_table(df[1:5000,:])
 open_html_table(pokes[1:500,:])
 open_html_table(bouts[1:500,:])
 ##
+unique(pokes[:, :SubjectID])
+transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
+transform!(bouts, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
+unique(pokes[:, :SubjectID])
+unique(bouts[:, :SubjectID])
+##
 r = findall(ismatch.(r"reward",df.state))
 t = findall(ismatch.(r"Trav",df.Port))
 res = [trav - r[findfirst(r.> trav) - 1] for trav in t]
@@ -45,10 +51,6 @@ open_html_table(filter(r-> r.SubjectID == mouse &&
     pokes))
 ##
 length(findall(Bool.(pokes.Rewarded) .&& Bool.(pokes.Leave))) / length(findall(Bool.(pokes.Leave)))
-##
-unique(pokes[:, :SubjectID])
-transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
-unique(pokes[:, :SubjectID])
 ##
 RaquelPharmaCalendar!(pokes)
 open_html_table(pokes[1:500,:])
@@ -80,9 +82,9 @@ unique(an_pokes.Phase)
 open_html_table(an_pokes[1:500,:[:SubjectID, :Day, :Port,:Leave,:Rewarded,:Richness,:Travel,
     :PokeInBout, :SummedForage, :ElapsedForage]])
 
-form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial +
+p_form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial +
     (1 + SummedForage + ElapsedForage + PokeInBout + Rewarded + Richness + Travel + RewardsInTrial|SubjectID))
-mdl1 = MixedModels.fit(MixedModel,form1, an_pokes, Bernoulli(); contrasts)
+p_mdl1 = MixedModels.fit(MixedModel,p_form1, an_pokes, Bernoulli(); contrasts)
 
 form2 = @formula(Leave ~ 1 + SummedForage + Richness + Travel + (1|SubjectID))
 mdl2 = MixedModels.fit(MixedModel,form2, an_pokes, Bernoulli(); contrasts)
@@ -91,3 +93,27 @@ unique(an_pokes.SubjectID)
 unique(an_pokes.StartDate)
 unique(an_pokes.Port)
 ##
+form1 = @formula(Leave ~ 1 + SummedForage + ElapsedForage  + Rewarded + Richness + Travel + RewardsInTrial +
+    (1 + SummedForage + ElapsedForage  + Rewarded + Richness + Travel + RewardsInTrial|SubjectID))
+mdl1 = MixedModels.fit(MixedModel,form1, bouts, Bernoulli(); contrasts)
+
+form2 = @formula(Leave ~ 1 + SummedForage + Richness + Travel + (1|SubjectID))
+mdl2 = MixedModels.fit(MixedModel,form2, bouts, Bernoulli(); contrasts)
+##
+check = combine(groupby(bouts, :SubjectID), [:Rewarded, :Travel,:Leave] .=> x -> [countmap(x)])
+open_html_table(check)
+findall(bouts.Travel .== 0)
+fdf = filter(r-> !ismissing(r.Travel) && r.Travel == 0, bouts)
+open_html_table(fdf)
+countmap(pokes.Bout)
+##
+fdf = filter(r-> !ismissing(r.Travel) && r.Travel == 0, pokes)
+countmap(pokes.Travel)
+##
+c2 = combine(groupby(pokes,[:SubjectID,:StartDate,:Bout]),
+    :Status => (x -> sum(ismatch.(r"forage",x))) => :ForagePokes,
+    :Status => (x -> sum(ismatch.(r"travel",x))) => :TravelPokes)
+c3 = filter(r -> r.ForagePokes == 0, c2)
+c4 = filter(r -> ismissing(r.Bout), pokes)
+findall(ismissing.(pokes.Bout))
+open_html_table(pokes[2680:2800,:])
