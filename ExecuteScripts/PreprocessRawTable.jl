@@ -17,6 +17,7 @@ df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), Da
 # open_html_table(df[1:500,:])
 ## Process pokes
 pokes = process_pokes(df)
+transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
 CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 ##
