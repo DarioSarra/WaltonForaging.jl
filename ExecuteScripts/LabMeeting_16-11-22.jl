@@ -18,8 +18,11 @@ df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), Da
 ## Process pokes
 pokes = process_pokes(df)
 transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
-CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
-pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
-##
 bouts = process_bouts(pokes)
+RaquelPharmaCalendar!(pokes)
+RaquelPharmaCalendar!(bouts)
+CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
 CSV.write(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"),bouts)
+##
+pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
+bouts = CSV.read(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"), DataFrame)
