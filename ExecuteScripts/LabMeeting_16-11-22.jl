@@ -27,7 +27,7 @@ CSV.write(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"),bouts)
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 bouts = CSV.read(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"), DataFrame)
 ##
-testb= dropmissing(bouts,:SummedForage)
+testb = dropmissing(bouts,:SummedForage)
 unique(testb.Treatment)
 filter!(r->r.Treatment == "Baseline", testb)
 ## define x span
@@ -65,3 +65,38 @@ km_surv = combine(groupby(km_df,:SubjectID)) do dd
 km_res = combine(groupby(km_surv,:Bin), :Survival .=> [mean, sem])
 @df km_res plot!(:Bin, :Survival_mean, ribbon = :Survival_sem, label = "Kaplan-Meier")
 savefig(joinpath(fig_path,"KaplanMeierSurvival.pdf"))
+##
+Distributions.fit(KaplanMeier,testb.SummedForage, testb.Rewarded)
+travel_df = filter(r -> r.SummedForage <=maxtime && !ismissing(r.Travel),testb)
+travel_surv = combine(groupby(travel_df,[:SubjectID, :Travel])) do dd
+                roundedforage = round.(dd.SummedForage./1000, digits = 0)
+                # Coding of event times is true for actual event time, false for right censored
+                km = Distributions.fit(KaplanMeier,roundedforage, .!dd.Rewarded)
+                dd2 = DataFrame(Bin = km.times, Survival = km.survival)
+                for v in maximum(dd2.Bin)+1:1:maxtime/1000
+                        push!(dd2, (v, 0.0), promote=false) # add bins not calculated beyond max reached
+                        push!(dd2,(0.0,1.0), promote=false) # add first bin starting at 1
+                end
+                return dd2
+        end
+travel_res = combine(groupby(travel_surv,[:Bin,:Travel]), :Survival .=> [mean, sem])
+@df travel_res plot(:Bin, :Survival_mean, ribbon = :Survival_sem,
+    group = :Travel,
+    ylabel = "Survival Rate", xlabel = "elapsed time (s)", tickfontsize = 7)
+savefig(joinpath(fig_path,"Travel.pdf"))
+
+N_ev_df1 = combine(groupby(travel_df,[:Travel, :SubjectID])) do dd
+    DataFrame(Total = nrow(dd), Censored = sum(dd.Rewarded), N_ev = nrow(dd) - sum(dd.Rewarded))
+end
+N_ev_df2 = combine(groupby(N_ev_df1,:Travel), :N_ev => mean => :N_ev)
+Ex_ev_df1 = combine(groupby(travel_surv,[:Travel, :SubjectID])) do dd
+    DataFrame(Ex_ev = sum(dd.Survival))
+end
+Ex_ev_df2 = combine(groupby(Ex_ev_df1,:Travel), :Ex_ev => mean => :Ex_ev)
+LogRank_df = innerjoin(N_ev_df2,Ex_ev_df2, on = :Travel)
+LogRank_df[!,:LogRank] =
+transform!(LogRank_df, [:N_ev, :Ex_ev] => ByRow((n,e) -> ((n-e)^2)/e) => :LogRank)
+pdf(Chisq(1), sum(LogRank_df.LogRank))
+open_html_table(check)
+number_of_events_g1 = nrow(filter(r-> !r.Rewarded,travel_df))
+expected_events_g1
