@@ -26,3 +26,39 @@ CSV.write(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"),bouts)
 ##
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)
 bouts = CSV.read(joinpath(main_path,"data",Exp,"Processed","BoutsTable.csv"), DataFrame)
+##
+testb= dropmissing(bouts,:SummedForage)
+unique(testb.Treatment)
+filter!(r->r.Treatment == "Baseline", testb)
+## define x span
+@df testb density(:SummedForage./1000, xlims = (0,10))
+xspan = range(0,15000, step = 1000)
+findall(testb.SummedForage .< 10)
+open_html_table(testb[27804-10:27804+10,:])
+## Naive survival
+naive_df = filter(r -> r.Leave && !r.Rewarded && r.SummedForage <=15000,testb)
+naive_surv = combine(groupby(naive_df,:SubjectID)) do dd
+                dd2 = DataFrame(Bin = collect(xspan))
+                dd2[!, :Survival] = [sum(dd.SummedForage .> b)/nrow(dd) for b in dd2.Bin]
+                return dd2
+        end
+naive_res = combine(groupby(naive_surv,:Bin), :Survival .=> [mean, sem])
+@df naive_res plot(:Bin/1000, :Survival_mean, ribbon = :Survival_sem)
+## Kaplan-Meier
+using Survival
+Distributions.fit(KaplanMeier,testb.SummedForage, testb.Rewarded)
+km_df = filter(r -> r.SummedForage <=15000,testb)
+km_surv = combine(groupby(km_df,:SubjectID)) do dd
+                roundedforage = round.(dd.SummedForage./1000, digits = 0)
+                # Coding of event times is true for actual event time, false for right censored
+                km = Distributions.fit(KaplanMeier,roundedforage, .!dd.Rewarded)
+                dd2 = DataFrame(Bin = km.times, Survival = km.survival)
+                for v in maximum(dd2.Bin)+1:1:15
+                        push!(dd2, (v, 0.0), promote=false) # add bins not calculated beyond max reached
+                        push!(dd2,(0.0,1.0), promote=false) # add first bin starting at 1
+                end
+                return dd2
+        end
+open_html_table(km_surv)
+km_res = combine(groupby(km_surv,:Bin), :Survival .=> [mean, sem])
+@df km_res plot(:Bin, :Survival_mean, ribbon = :Survival_sem)
