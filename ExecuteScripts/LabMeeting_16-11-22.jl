@@ -67,29 +67,39 @@ km_res = combine(groupby(km_surv,:Bin), :Survival .=> [mean, sem])
 savefig(joinpath(fig_path,"KaplanMeierSurvival.pdf"))
 ##
 Distributions.fit(KaplanMeier,testb.SummedForage, testb.Rewarded)
+Distributions.fit(NelsonAalen,testb.SummedForage, testb.Rewarded)
 travel_df = filter(r -> r.SummedForage <=maxtime && !ismissing(r.Travel),testb)
-travel_surv = combine(groupby(travel_df,[:SubjectID, :Travel])) do dd
+travel = combine(groupby(travel_df,[:SubjectID, :Travel])) do dd
                 roundedforage = round.(dd.SummedForage./1000, digits = 0)
                 # Coding of event times is true for actual event time, false for right censored
                 km = Distributions.fit(KaplanMeier,roundedforage, .!dd.Rewarded)
-                dd2 = DataFrame(Bin = km.times, Survival = km.survival)
-                for v in maximum(dd2.Bin)+1:1:maxtime/1000
-                        push!(dd2, (v, 0.0), promote=false) # add bins not calculated beyond max reached
-                        push!(dd2,(0.0,1.0), promote=false) # add first bin starting at 1
-                end
+                haz = Distributions.fit(NelsonAalen,roundedforage, .!dd.Rewarded)
+                dd2 = DataFrame(Bin = km.times, Survival = km.survival, CumHazard = haz.chaz)
+                # for v in maximum(dd2.Bin)+1:1:maxtime/1000
+                #         push!(dd2, (v, 0.0), promote=false) # add bins not calculated beyond max reached
+                #         push!(dd2,(0.0,1.0), promote=false) # add first bin starting at 1
+                # end
                 return dd2
         end
-travel_res = combine(groupby(travel_surv,[:Bin,:Travel]), :Survival .=> [mean, sem])
-@df travel_res plot(:Bin, :Survival_mean, ribbon = :Survival_sem,
+open_html_table(travel)
+travel_res = combine(groupby(travel,[:Bin,:Travel]), :Survival .=> [mean, sem], :CumHazard .=> [mean, sem])
+@df travel_res plot(:Bin, :Survival_mean, yerror = :Survival_sem,
     group = :Travel,
     ylabel = "Survival Rate", xlabel = "elapsed time (s)", tickfontsize = 7)
-savefig(joinpath(fig_path,"Travel.pdf"))
-
+savefig(joinpath(fig_path,"Survival_Travel.pdf"))
+@df travel_res plot(:Bin, :CumHazard_mean, yerror = :CumHazard_sem,
+        group = :Travel,
+        ylabel = "Cumulative Hazard", xlabel = "elapsed time (s)", tickfontsize = 7)
+savefig(joinpath(fig_path,"CumHazard_Travel.pdf"))
+##Cox regression
+travel_df[!,:Event] = EventTime.(travel_df.SummedForage, .!travel_df.Rewarded)
+model = coxph(@formula(Event ~ Travel + Richness), travel_df)
+## Logrank attempt
 N_ev_df1 = combine(groupby(travel_df,[:Travel, :SubjectID])) do dd
     DataFrame(Total = nrow(dd), Censored = sum(dd.Rewarded), N_ev = nrow(dd) - sum(dd.Rewarded))
 end
 N_ev_df2 = combine(groupby(N_ev_df1,:Travel), :N_ev => mean => :N_ev)
-Ex_ev_df1 = combine(groupby(travel_surv,[:Travel, :SubjectID])) do dd
+Ex_ev_df1 = combine(groupby(travel,[:Travel, :SubjectID])) do dd
     DataFrame(Ex_ev = sum(dd.Survival))
 end
 Ex_ev_df2 = combine(groupby(Ex_ev_df1,:Travel), :Ex_ev => mean => :Ex_ev)
@@ -100,3 +110,4 @@ pdf(Chisq(1), sum(LogRank_df.LogRank))
 open_html_table(check)
 number_of_events_g1 = nrow(filter(r-> !r.Rewarded,travel_df))
 expected_events_g1
+##
