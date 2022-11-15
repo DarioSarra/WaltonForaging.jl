@@ -1,8 +1,8 @@
 using Revise, WaltonForaging
 if ispath("/home/beatriz/Documents/Datasets/WaltonForaging")
     main_path ="/home/beatriz/Documents/Datasets/WaltonForaging"
-elseif ispath("/Users/dariosarra/Documents/Lab/Walton/WaltonForaging")
-        main_path = "/Users/dariosarra/Documents/Lab/Walton/WaltonForaging"
+elseif ispath("/Users/dariosarra/Documents/Lab/Oxford/Walton/WaltonForaging")
+        main_path = "/Users/dariosarra/Documents/Lab/Oxford/Walton/WaltonForaging"
 elseif ispath(joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging"))
         main_path = joinpath("C:\\Users","dario","OneDrive","Documents","Lab","Walton","WaltonForaging")
 end
