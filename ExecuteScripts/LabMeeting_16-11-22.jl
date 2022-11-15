@@ -94,6 +94,15 @@ savefig(joinpath(fig_path,"CumHazard_Travel.pdf"))
 ##Cox regression
 travel_df[!,:Event] = EventTime.(travel_df.SummedForage, .!travel_df.Rewarded)
 model = coxph(@formula(Event ~ Travel + Richness), travel_df)
+##
+sort!(travel_res,[:Travel,:Bin])
+open_html_table(travel_res)
+Haz_df = transform(groupby(travel_res,:Travel), :Survival_mean => (x -> vcat(diff(x),[0])) => :DiffSurv)
+transform!(groupby(Haz_df,:Travel),[:Survival_mean, :DiffSurv] =>
+        ByRow((s,d) -> -(d/s)) => :HazardRate
+)
+transform!(groupby(Haz_df,:Travel), :HazardRate => cumsum)
+open_html_table(Haz_df)
 ## Logrank attempt
 N_ev_df1 = combine(groupby(travel_df,[:Travel, :SubjectID])) do dd
     DataFrame(Total = nrow(dd), Censored = sum(dd.Rewarded), N_ev = nrow(dd) - sum(dd.Rewarded))
