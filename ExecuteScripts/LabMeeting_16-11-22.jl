@@ -43,7 +43,10 @@ naive_surv = combine(groupby(naive_df,:SubjectID)) do dd
                 return dd2
         end
 naive_res = combine(groupby(naive_surv,:Bin), :Survival .=> [mean, sem])
-@df naive_res plot(:Bin/1000, :Survival_mean, ribbon = :Survival_sem, label = "Naive")
+@df naive_res plot(:Bin/1000, :Survival_mean, ribbon = :Survival_sem, label = "Naive",
+    ylabel = "Survival Rate", xlabel = "elapsed time (s)", tickfontsize = 7)
+fig_path = "/Users/dariosarra/Documents/Lab/Oxford/Walton/Presentations/Lab_meeting20221116"
+savefig(joinpath(fig_path,"NaiveSurvival.pdf"))
 ## Kaplan-Meier
 using Survival
 Distributions.fit(KaplanMeier,testb.SummedForage, testb.Rewarded)
@@ -59,6 +62,6 @@ km_surv = combine(groupby(km_df,:SubjectID)) do dd
                 end
                 return dd2
         end
-open_html_table(km_surv)
 km_res = combine(groupby(km_surv,:Bin), :Survival .=> [mean, sem])
 @df km_res plot!(:Bin, :Survival_mean, ribbon = :Survival_sem, label = "Kaplan-Meier")
+savefig(joinpath(fig_path,"KaplanMeierSurvival.pdf"))
