@@ -106,9 +106,6 @@ res_cox = combine(groupby(travel_df,:SubjectID)) do dd
         model = coxph(@formula(Event ~ Travel + Richness + RewardsInTrial), dd)
         return DataFrame(coeftable(model))
 end
-tt = OneSampleTTest(res_cox.Estimate)
-tt.stderr
-tt
 test_cox = combine(groupby(res_cox,:Name)) do dd
         test = OneSampleTTest(dd.Estimate)
         ci1,ci2 = confint(test)
@@ -124,6 +121,7 @@ open_html_table(test_cox)
         @df test_cox scatter!(:Mean, :Name, xerror = :CI,
         markercolor = :red, markersize = 6, color = :black,
         label = "t-test estimate")
+savefig(joinpath(fig_path,"Cox.pdf"))
 ##
 sort!(travel_res,[:Travel,:Bin])
 open_html_table(travel_res)
