@@ -48,7 +48,6 @@ naive_res = combine(groupby(naive_surv,:Bin), :Survival .=> [mean, sem])
 fig_path = "/Users/dariosarra/Documents/Lab/Oxford/Walton/Presentations/Lab_meeting20221116"
 savefig(joinpath(fig_path,"NaiveSurvival.pdf"))
 ## Kaplan-Meier
-using Survival
 km_df = filter(r -> r.SummedForage <=maxtime,testb)
 km_surv = combine(groupby(km_df,:SubjectID)) do dd
                 roundedforage = round.(dd.SummedForage./1000, digits = 0)
@@ -93,11 +92,38 @@ savefig(joinpath(fig_path,"CumHazard_Travel.pdf"))
 ## median Survival
 mediansurv = combine(groupby(travel, [:SubjectID,:Travel]), [:Survival,:Bin] =>
     ((s,t) -> t[findlast(s.>=0.5)]) => :MedianSurv)
-unstack(mediansurv,:SubjectID,:Travel,:MedianSurv)
-SignedRankTest(mediansurv.short, mediansurv.long)
+mediansurv = unstack(mediansurv,:SubjectID,:Travel,:MedianSurv)
+mst = SignedRankTest(Float64.(mediansurv.short), Float64.(mediansurv.long))
 ##Cox regression
 travel_df[!,:Event] = EventTime.(travel_df.SummedForage, .!travel_df.Rewarded)
-model = coxph(@formula(Event ~ Travel + Richness), travel_df)
+model = coxph(@formula(Event ~ Travel + Richness + RewardsInTrial), travel_df)
+coefnames(model)
+coef(model)
+stderror(model)
+DataFrame(coeftable(model))
+## Cox by mouse
+res_cox = combine(groupby(travel_df,:SubjectID)) do dd
+        model = coxph(@formula(Event ~ Travel + Richness + RewardsInTrial), dd)
+        return DataFrame(coeftable(model))
+end
+tt = OneSampleTTest(res_cox.Estimate)
+tt.stderr
+tt
+test_cox = combine(groupby(res_cox,:Name)) do dd
+        test = OneSampleTTest(dd.Estimate)
+        ci1,ci2 = confint(test)
+        DataFrame(P = pvalue(test),
+                Mean = test.xbar,
+                CI = ci2-test.xbar,
+                OrigCI = confint(test))
+end
+open_html_table(test_cox)
+@df res_cox scatter(:Estimate, :Name, xticks = :auto, xrotation = 45, markercolor = :lightgrey,
+        label = "subject coeff")
+        vline!([0,0], linestyle = :dash, linecolor = :black, label = "")
+        @df test_cox scatter!(:Mean, :Name, xerror = :CI,
+        markercolor = :red, markersize = 6, color = :black,
+        label = "t-test estimate")
 ##
 sort!(travel_res,[:Travel,:Bin])
 open_html_table(travel_res)
