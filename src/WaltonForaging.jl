@@ -3,7 +3,8 @@ module WaltonForaging
 using Reexport
 #add CSV@0.8.5
 @reexport using CSV, DataFrames, CategoricalArrays, StatsPlots, BrowseTables, StatsBase, MixedModels, StandardizedPredictors, Effects
-@reexport using Optim, Distributions, Random, Dates
+@reexport using Random, Dates, HypothesisTests, Survival
+@reexport using Optim, Distributions
 @reexport using Polynomials
 @reexport using LsqFit, Roots
 import Statistics: median, std

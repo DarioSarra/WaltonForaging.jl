@@ -49,7 +49,6 @@ fig_path = "/Users/dariosarra/Documents/Lab/Oxford/Walton/Presentations/Lab_meet
 savefig(joinpath(fig_path,"NaiveSurvival.pdf"))
 ## Kaplan-Meier
 using Survival
-Distributions.fit(KaplanMeier,testb.SummedForage, testb.Rewarded)
 km_df = filter(r -> r.SummedForage <=maxtime,testb)
 km_surv = combine(groupby(km_df,:SubjectID)) do dd
                 roundedforage = round.(dd.SummedForage./1000, digits = 0)
@@ -88,9 +87,14 @@ travel_res = combine(groupby(travel,[:Bin,:Travel]), :Survival .=> [mean, sem], 
     ylabel = "Survival Rate", xlabel = "elapsed time (s)", tickfontsize = 7)
 savefig(joinpath(fig_path,"Survival_Travel.pdf"))
 @df travel_res plot(:Bin, :CumHazard_mean, yerror = :CumHazard_sem,
-        group = :Travel,
+        group = :Travel, legend = :topleft,
         ylabel = "Cumulative Hazard", xlabel = "elapsed time (s)", tickfontsize = 7)
 savefig(joinpath(fig_path,"CumHazard_Travel.pdf"))
+## median Survival
+mediansurv = combine(groupby(travel, [:SubjectID,:Travel]), [:Survival,:Bin] =>
+    ((s,t) -> t[findlast(s.>=0.5)]) => :MedianSurv)
+unstack(mediansurv,:SubjectID,:Travel,:MedianSurv)
+SignedRankTest(mediansurv.short, mediansurv.long)
 ##Cox regression
 travel_df[!,:Event] = EventTime.(travel_df.SummedForage, .!travel_df.Rewarded)
 model = coxph(@formula(Event ~ Travel + Richness), travel_df)
