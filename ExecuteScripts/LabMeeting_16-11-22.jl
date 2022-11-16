@@ -123,6 +123,18 @@ open_html_table(test_cox)
         label = "t-test estimate")
 savefig(joinpath(fig_path,"Cox.pdf"))
 ##
+form1 = @formula(Leave ~ 1 + SummedForage + Travel + Richness + RewardsInTrial +
+    (1 + SummedForage + Travel + Richness + RewardsInTrial|SubjectID))
+mdl1 = MixedModels.fit(MixedModel,form1, travel_df, Bernoulli())
+##
+mdf = DataFrame(coeftable(mdl1))
+rename!(mdf, Symbol("Std. Error") => :Err, Symbol("Coef.") => :Estimate)
+@df mdf scatter(:Estimate, :Name, xerror= :Err,
+        xticks = :auto, xrotation = 45, markercolor = :red,
+        markersize = 6, color = :black,
+        label = "Logistic MixedModel estimates", legend = false)
+        vline!([0,0], linestyle = :dash, linecolor = :black, label = "")
+##
 sort!(travel_res,[:Travel,:Bin])
 open_html_table(travel_res)
 Haz_df = transform(groupby(travel_res,:Travel), :Survival_mean => (x -> vcat(diff(x),[0])) => :DiffSurv)
