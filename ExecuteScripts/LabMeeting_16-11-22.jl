@@ -127,6 +127,11 @@ form1 = @formula(Leave ~ 1 + SummedForage + Travel + Richness + RewardsInTrial +
     (1 + SummedForage + Travel + Richness + RewardsInTrial|SubjectID))
 mdl1 = MixedModels.fit(MixedModel,form1, travel_df, Bernoulli())
 ##
+form2 = @formula(Leave ~ 1 + SummedForage * Travel + SummedForage * Richness +
+    SummedForage * RewardsInTrial +
+    (1 + SummedForage + Travel + Richness + RewardsInTrial|SubjectID))
+mdl2 = MixedModels.fit(MixedModel,form2, travel_df, Bernoulli())
+##
 mdf = DataFrame(coeftable(mdl1))
 rename!(mdf, Symbol("Std. Error") => :Err, Symbol("Coef.") => :Estimate)
 @df mdf scatter(:Estimate, :Name, xerror= :Err,
