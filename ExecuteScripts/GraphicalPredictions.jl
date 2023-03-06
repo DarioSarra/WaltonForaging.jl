@@ -39,7 +39,7 @@ rich = update_time(0.227)
 @df poor plot(:Mean, :Rew, ribbon = (:CI_L,:CI_H), fillalpha = 0.2,label = "poor")
 @df medium plot!(:Mean, :Rew, ribbon = (:CI_L,:CI_H), fillalpha = 0.2, label = "medium")
 @df rich plot!(:Mean, :Rew, ribbon = (:CI_L,:CI_H), fillalpha = 0.2, label = "high",
-     legend = :topleft, xlims = (0,15), ylims=(1,18),xticks = 0:1:15,yticks = 0:1:18)
+     legend = :topleft, xlims = (0,15), ylims=(0,18),xticks = 0:1:15,yticks = 0:1:18)
 ##
 xaxis = 0:20
 low = [0.075,32.5]
