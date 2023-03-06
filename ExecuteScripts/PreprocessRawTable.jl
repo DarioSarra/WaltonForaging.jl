@@ -13,10 +13,10 @@ Exp = "5HTPharma"
 # open_html_table(rawt[1:1000,:])
 # df = process_rawtable(rawt)
 # CSV.write(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"),df)
-df = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), DataFrame)
-# open_html_table(df[1:500,:])
+expanded_rawt = CSV.read(joinpath(main_path,"data",Exp,"Processed","JuliaRawTable.csv"), DataFrame)
+# open_html_table(expanded_rawt[1:500,:])
 ## Process pokes
-pokes = process_pokes(df)
+pokes = process_pokes(expanded_rawt)
 transform!(pokes, :SubjectID => ByRow(x -> (ismatch(r"RP\d$",x) ? "RP0"*x[end] : x)) => :SubjectID)
 CSV.write(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"),pokes)
 pokes = CSV.read(joinpath(main_path,"data",Exp,"Processed","PokesTable.csv"), DataFrame)

@@ -54,3 +54,8 @@ const PortStatusDict = Dict("PokeLeft" => "forage",
     "RewRight" => "reward",
     "TravPoke" => "travel"
 )
+
+const RichnessToTimeDict = Dict("rich" => 227.5831,
+    "medium" => 500.0,
+    "poor" => 1098.5
+)
